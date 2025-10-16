@@ -1,304 +1,383 @@
+# 🚀 Mirai Prototype
 
-# 🌐 Hello World on Talos Homelab via Cloudflare Tunnel
-
-This guide walks through deploying a simple **Hello World web app** on your **Talos Linux homelab** Kubernetes cluster and exposing it securely on the internet using **Cloudflare Tunnel** — no port forwarding, no public IP exposure.
+A GitOps-driven web application deployed on a Talos Linux Kubernetes homelab cluster using ArgoCD for continuous deployment and Cloudflare Tunnel for secure external access.
 
 ---
 
-## 🧱 Prerequisites
+## 📋 Overview
 
-- ✅ A running **Talos Linux** Kubernetes cluster (HA or single-node)
-- ✅ `kubectl` configured to access the cluster
-- ✅ A **Cloudflare account** with your domain (`sogos.io`) already added
-- ✅ The **cloudflared** CLI installed (on your local Mac or inside the cluster)
+This project demonstrates a complete modern deployment pipeline:
 
-```bash
-brew install cloudflared
+- **Application**: Simple web application served via nginx
+- **Cluster**: 3-node HA Talos Linux Kubernetes cluster (Mac Mini hardware)
+- **GitOps**: ArgoCD automatically syncs from GitHub to Kubernetes
+- **Ingress**: Cloudflare Tunnel provides secure HTTPS access without port forwarding
+- **Security**: Runs with strict pod security policies (non-root, minimal privileges)
+
+---
+
+## 🏗️ Architecture
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         Internet                             │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+              Cloudflare Edge (HTTPS)
+                       │
+            ┌──────────▼──────────┐
+            │ Cloudflare Tunnel   │
+            │  (Outbound Only)    │
+            └──────────┬──────────┘
+                       │
+┌──────────────────────▼─────────────────────────────────────┐
+│              Talos Kubernetes Cluster                       │
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │  cloudflared Pod                                    │   │
+│  │  - Maintains tunnel to Cloudflare                   │   │
+│  │  - Routes: mirai-prototype.sogos.io                │   │
+│  └────────────┬───────────────────────────────────────┘   │
+│               │                                             │
+│  ┌────────────▼───────────────────────────────────────┐   │
+│  │  mirai-prototype Service (ClusterIP)               │   │
+│  │  - Internal: port 80 → 8080                        │   │
+│  └────────────┬───────────────────────────────────────┘   │
+│               │                                             │
+│  ┌────────────▼───────────────────────────────────────┐   │
+│  │  mirai-prototype Pods (2 replicas)                 │   │
+│  │  - nginxinc/nginx-unprivileged:alpine              │   │
+│  │  - Non-root security context                       │   │
+│  │  - Serves content from ConfigMap                   │   │
+│  └────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │  ArgoCD                                             │   │
+│  │  - Watches GitHub repo                              │   │
+│  │  - Auto-syncs changes to cluster                    │   │
+│  │  - Self-healing enabled                             │   │
+│  └────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                       │
+                       │ Pulls changes
+                       ▼
+              ┌─────────────────┐
+              │  GitHub Repo    │
+              │  (main branch)  │
+              └─────────────────┘
 ```
 
 ---
 
-## 🚀 1. Create the Hello World App
-
-Create a working directory from your applications development root directory:
-
-```bash
-mkdir hello-world
-cd hello-world
+## 📁 Project Structure
 ```
-
-Add the **HTML page**:
-
-```bash
-cat > index.html <<'EOF'
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Hello World</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background-color: #111;
-      color: #00ffcc;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-  </style>
-</head>
-<body>
-  <h1>Hello from Talos Homelab!</h1>
-</body>
-</html>
-EOF
+mirai-prototype/
+├── README.md                      # This file
+├── hello-world.yaml               # Legacy manifest (not used by ArgoCD)
+├── index.html                     # Reference HTML (content in ConfigMap)
+└── k8s/
+    └── base/
+        ├── kustomization.yaml     # Kustomize manifest list
+        ├── deployment.yaml        # Pod specification
+        ├── service.yaml           # Internal service definition
+        └── configmap.yaml         # HTML content
 ```
 
 ---
 
-## ⚙️ 2. Deploy on Kubernetes
+## 🔧 Technical Details
 
-Create `hello-world.yaml`:
+### Application Stack
 
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **Runtime** | nginxinc/nginx-unprivileged:alpine | Web server (runs as non-root) |
+| **Orchestration** | Kubernetes 1.34.0 | Container orchestration |
+| **OS** | Talos Linux v1.11.2 | Immutable OS for Kubernetes |
+| **GitOps** | ArgoCD v3.1.8 | Continuous deployment |
+| **Ingress** | Cloudflare Tunnel | Secure external access |
+
+### Security Features
+
+- **Non-root containers**: Runs as user 101 (nginx)
+- **Minimal capabilities**: All Linux capabilities dropped
+- **No privilege escalation**: `allowPrivilegeEscalation: false`
+- **Seccomp profile**: `RuntimeDefault`
+- **Read-only root filesystem**: ConfigMap mounted for content
+
+### Networking
+
+- **Internal Service**: `mirai-prototype.default.svc.cluster.local:80`
+- **Container Port**: 8080 (nginx-unprivileged default)
+- **External URL**: https://mirai-prototype.sogos.io
+- **DNS**: Managed by Cloudflare
+- **Tunnel**: No inbound firewall ports required
+
+---
+
+## 🚀 Deployment Workflow
+
+### Initial Setup (One-time)
+
+1. **Install ArgoCD** in the cluster
+2. **Create Cloudflare Tunnel** with DNS routing
+3. **Create ArgoCD Application** pointing to this repo
+4. **Enable auto-sync** with prune and self-heal
+
+### Daily Development Workflow
+```bash
+# 1. Make changes to Kubernetes manifests
+vim k8s/base/configmap.yaml
+
+# 2. Commit and push to GitHub
+git add k8s/base/configmap.yaml
+git commit -m "Update homepage content"
+git push origin main
+
+# 3. ArgoCD automatically detects changes (within ~3 minutes)
+# 4. Changes are deployed to the cluster
+# 5. New pods roll out with zero downtime
+# 6. Changes are live at https://mirai-prototype.sogos.io
+```
+
+**No manual `kubectl apply` needed!** ArgoCD handles everything automatically.
+
+---
+
+## 📊 Monitoring & Management
+
+### Check Application Status
+```bash
+# View pods
+kubectl get pods -l app=mirai-prototype
+
+# View service
+kubectl get svc mirai-prototype
+
+# View logs
+kubectl logs -l app=mirai-prototype -f
+```
+
+### ArgoCD Management
+
+Access ArgoCD UI via port-forward:
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:80
+```
+
+Then open: http://localhost:8080
+
+Login:
+- **Username**: `admin`
+- **Password**: 
+```bash
+  kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+```
+
+### ArgoCD CLI Commands
+```bash
+# Install CLI
+brew install argocd
+
+# Login
+argocd login localhost:8080 --username admin --insecure
+
+# View application
+argocd app get mirai-prototype
+
+# Manual sync (if needed)
+argocd app sync mirai-prototype
+
+# View sync history
+argocd app history mirai-prototype
+```
+
+---
+
+## 🔄 GitOps Sync Policies
+
+The ArgoCD application is configured with:
+
+- **Auto-sync**: Enabled (polls every ~3 minutes)
+- **Prune**: Enabled (removes resources deleted from Git)
+- **Self-heal**: Enabled (reverts manual cluster changes)
+- **Create Namespace**: Enabled
+
+This means:
+- ✅ Changes in Git are automatically deployed
+- ✅ Manual changes to the cluster are automatically reverted
+- ✅ Deleted manifests result in deleted resources
+- ✅ The cluster always matches Git (source of truth)
+
+---
+
+## 🛠️ Troubleshooting
+
+### Application Not Accessible
+```bash
+# Check if pods are running
+kubectl get pods -l app=mirai-prototype
+
+# Check service endpoints
+kubectl get endpoints mirai-prototype
+
+# Check cloudflared logs
+kubectl logs -l app=cloudflared --tail=50
+
+# Test internal connectivity
+kubectl run curl-test --image=curlimages/curl --rm -it -- \
+  curl http://mirai-prototype.default.svc.cluster.local:80
+```
+
+### ArgoCD Not Syncing
+```bash
+# Check ArgoCD application status
+kubectl get application mirai-prototype -n argocd -o yaml
+
+# View ArgoCD logs
+kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller
+
+# Force refresh
+argocd app sync mirai-prototype --force
+```
+
+### Pod Crashes or ImagePullBackOff
+```bash
+# View pod events
+kubectl describe pod <pod-name>
+
+# View pod logs
+kubectl logs <pod-name>
+
+# Check security context issues
+kubectl get pod <pod-name> -o yaml | grep -A 10 securityContext
+```
+
+---
+
+## 📝 Making Changes
+
+### Update HTML Content
+
+Edit `k8s/base/configmap.yaml`:
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: hello-world
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: hello-world
-  template:
-    metadata:
-      labels:
-        app: hello-world
-    spec:
-      securityContext:
-        seccompProfile:
-          type: RuntimeDefault
-      containers:
-      - name: hello-world
-        image: nginx:alpine
-        securityContext:
-          allowPrivilegeEscalation: false
-          runAsNonRoot: true
-          capabilities:
-            drop:
-              - ALL
-        volumeMounts:
-        - name: html
-          mountPath: /usr/share/nginx/html
-      volumes:
-      - name: html
-        configMap:
-          name: hello-world-html
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: hello-world-html
 data:
   index.html: |
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Mirai Prototype</title>
+      <style>
+        /* Your CSS here */
+      </style>
+    </head>
     <body>
-      <h1>Hello from Talos Homelab!</h1>
+      <h1>Your New Content</h1>
     </body>
     </html>
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: hello-world
-spec:
-  selector:
-    app: hello-world
-  ports:
-  - port: 80
-    targetPort: 80
-    nodePort: 30080
-  type: NodePort
 ```
 
-Apply it:
+Commit and push - ArgoCD will deploy automatically.
 
-```bash
-kubectl apply -f hello-world.yaml
-```
+### Scale Replicas
 
-Check the pods:
-
-```bash
-kubectl get pods -l app=hello-world
-```
-
-If you have **only control-plane nodes**, untaint them so workloads can run:
-
-```bash
-kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-```
-
-When the pod shows `Running`, test locally:
-
-```bash
-curl http://192.168.1.223:30080
-```
-
----
-
-## ☁️ 3. Configure Cloudflare Tunnel
-
-### Step 1: Log in
-
-Authenticate with Cloudflare (select your `sogos.io` domain):
-
-```bash
-cloudflared tunnel login
-```
-
-### Step 2: Create a tunnel
-
-```bash
-cloudflared tunnel create talos-homelab
-```
-
-This creates a JSON credential file in `~/.cloudflared/`.
-
-### Step 3: Configure the tunnel
-
-Create `~/.cloudflared/config.yml`:
-
+Edit `k8s/base/deployment.yaml`:
 ```yaml
-tunnel: <YOUR-TUNNEL-UUID>
-credentials-file: /Users/<your-username>/.cloudflared/<YOUR-TUNNEL-UUID>.json
-
-ingress:
-  - hostname: hello.sogos.io
-    service: http://192.168.1.223:30080
-  - service: http_status:404
-```
-
-Replace:
-- `<YOUR-TUNNEL-UUID>` with your tunnel ID
-- `192.168.1.223` with the node hosting your `hello-world` service
-
-### Step 4: Create DNS route
-
-```bash
-cloudflared tunnel route dns talos-homelab hello.sogos.io
-```
-
-This automatically adds a proxied DNS record in Cloudflare.
-
-### Step 5: Run the tunnel
-
-```bash
-cloudflared tunnel run talos-homelab
-```
-
-You’ll see logs like:
-```
-INF Registered tunnel connection ... location=ewr01 protocol=quic
-```
-
-That means your tunnel is live.
-
-Visit:
-
-👉 **https://hello.sogos.io**
-
-You should now see your Hello World page — securely served through Cloudflare’s edge!
-
----
-
-## 🔁 4. Run as a Persistent Service (optional)
-
-Keep the tunnel always running:
-
-```bash
-cloudflared service install
-```
-
-This installs a background macOS service.
-
----
-
-## 🧩 5. Run Cloudflared Inside Kubernetes (optional)
-
-You can also deploy `cloudflared` *inside your cluster* to keep the tunnel live even if your Mac is offline.
-
-Create `cloudflared-deploy.yaml`:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: cloudflared-credentials
-type: Opaque
-stringData:
-  credentials.json: |
-    # Paste contents of ~/.cloudflared/<YOUR-TUNNEL-UUID>.json here
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cloudflared
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: cloudflared
-  template:
-    metadata:
-      labels:
-        app: cloudflared
-    spec:
-      containers:
-      - name: cloudflared
-        image: cloudflare/cloudflared:latest
-        args: ["tunnel", "--no-autoupdate", "run", "talos-homelab"]
-        volumeMounts:
-        - name: creds
-          mountPath: /etc/cloudflared
-      volumes:
-      - name: creds
-        secret:
-          secretName: cloudflared-credentials
+  replicas: 3  # Change from 2 to 3
 ```
 
-Apply it:
-
-```bash
-kubectl apply -f cloudflared-deploy.yaml
+### Add Environment Variables
+```yaml
+containers:
+- name: mirai-prototype
+  image: nginxinc/nginx-unprivileged:alpine
+  env:
+  - name: MY_VAR
+    value: "my-value"
 ```
 
-Now your homelab tunnel will persist entirely within Kubernetes.
+---
+
+## 🌐 External Access
+
+The application is accessible at:
+
+**https://mirai-prototype.sogos.io**
+
+This URL is:
+- ✅ Secured with Cloudflare's SSL/TLS
+- ✅ Protected by Cloudflare's DDoS protection
+- ✅ Accessible from anywhere on the internet
+- ✅ No port forwarding or firewall changes required
 
 ---
 
-## ✅ Summary
+## 🔐 Security Considerations
 
-| Step | Description |
-|------|--------------|
-| 1️⃣ | Deploy Hello World on Talos cluster |
-| 2️⃣ | Expose with NodePort (port 30080) |
-| 3️⃣ | Create a Cloudflare Tunnel |
-| 4️⃣ | Route DNS `hello.sogos.io` to the tunnel |
-| 5️⃣ | Verify it’s live at `https://hello.sogos.io` |
-| 6️⃣ | (Optional) Run cloudflared as a background service or Kubernetes pod |
+### What's Secure
+
+- No public IP exposure (outbound-only tunnel)
+- No open firewall ports
+- Non-root container execution
+- Minimal Linux capabilities
+- Immutable infrastructure (GitOps)
+- Automatic security updates via image updates
+
+### Best Practices Implemented
+
+- Least privilege security contexts
+- Seccomp profiles enabled
+- Read-only root filesystems where possible
+- ConfigMap for content (not baked into image)
+- Replicas for high availability
 
 ---
 
-## 🧠 Notes
+## 📚 Related Documentation
 
-- No port forwarding or public IP exposure — Cloudflare Tunnel makes an **outbound-only** connection.
-- Your Talos cluster remains **HA**, **secure**, and **firewall-friendly**.
-- You can scale this pattern to host more internal apps (Grafana, ArgoCD, etc.) — just add new entries under `ingress:` in your Cloudflare config.
+- [Talos Linux Documentation](https://www.talos.dev/)
+- [ArgoCD Documentation](https://argo-cd.readthedocs.io/)
+- [Cloudflare Tunnel Documentation](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
 
 ---
 
-**Enjoy your secure, production-grade Hello World!** 🌎  
-— Powered by *Talos Linux + Kubernetes + Cloudflare Tunnel*
+## 🎓 What We Learned
+
+This project demonstrates:
+
+1. **GitOps Principles**: Git as the single source of truth
+2. **Declarative Infrastructure**: Everything defined in YAML
+3. **Continuous Deployment**: Automatic deployment from Git
+4. **Security Hardening**: Running containers with minimal privileges
+5. **Cloud-Native Networking**: Service mesh and tunnel-based ingress
+6. **High Availability**: Multiple replicas with automatic failover
+
+---
+
+## 🚧 Future Enhancements
+
+Potential improvements:
+
+- [ ] Add CI/CD pipeline (GitHub Actions)
+- [ ] Implement health checks and readiness probes
+- [ ] Add Prometheus monitoring
+- [ ] Implement Grafana dashboards
+- [ ] Add automated testing
+- [ ] Set up staging environment
+- [ ] Implement blue-green deployments
+- [ ] Add resource limits and requests
+- [ ] Implement horizontal pod autoscaling
+
+---
+
+## 📄 License
+
+This is a prototype project for learning and experimentation.
+
+---
+
+**Built with ❤️ on Talos Linux Kubernetes**
+
+*Last Updated: October 16, 2025*
