@@ -1,0 +1,24 @@
+# Add this to your Cloudflare Tunnel configuration
+# This is an EXAMPLE - adjust for your actual tunnel setup
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: default
+data:
+  config.yaml: |
+    tunnel: YOUR_TUNNEL_ID
+    credentials-file: /etc/cloudflared/creds/credentials.json
+    
+    ingress:
+      # Route for the original hello-world app
+      - hostname: mirai-prototype.sogos.io
+        service: http://mirai-prototype:80
+      
+      # NEW: Route for the frontend application
+      - hostname: mirai.sogos.io
+        service: http://mirai-frontend:80
+      
+      # Catch-all rule
+      - service: http_status:404

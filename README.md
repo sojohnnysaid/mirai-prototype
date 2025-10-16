@@ -381,3 +381,48 @@ This is a prototype project for learning and experimentation.
 **Built with ❤️ on Talos Linux Kubernetes**
 
 *Last Updated: October 16, 2025*
+
+---
+
+## 🔄 CI/CD Pipeline
+
+### Automated Deployment Flow
+
+1. **Code Changes** → Push to `main` branch
+2. **GitHub Actions** → Builds Docker image
+3. **Container Registry** → Pushes to GitHub Container Registry (ghcr.io)
+4. **ArgoCD** → Detects new image and syncs
+5. **Kubernetes** → Rolling update with zero downtime
+6. **Live** → Changes appear at https://mirai.sogos.io
+
+### Initial Setup
+```bash
+# Run setup script
+./scripts/setup-cicd.sh
+
+# Push to GitHub
+git add .
+git commit -m "Setup CI/CD pipeline"
+git push origin main
+
+# Deploy with ArgoCD
+kubectl apply -f k8s/argocd-frontend-app.yaml
+argocd app sync mirai-frontend
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+
+### Quick Commands
+```bash
+# Watch deployment
+kubectl get pods -l app=mirai-frontend -w
+
+# View logs
+kubectl logs -l app=mirai-frontend -f
+
+# Check ArgoCD status
+argocd app get mirai-frontend
+
+# Force sync
+argocd app sync mirai-frontend
+```
