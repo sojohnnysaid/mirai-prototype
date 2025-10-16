@@ -57,4 +57,17 @@ spec:
     targetPort: 80
     nodePort: 30080
   type: NodePort
-
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-server-nodeport
+  namespace: argocd
+spec:
+  selector:
+    app.kubernetes.io/name: argocd-server
+  ports:
+  - port: 80
+    targetPort: 8080
+    nodePort: 30081
+  type: NodePort
