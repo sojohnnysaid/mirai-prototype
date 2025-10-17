@@ -94,3 +94,7 @@ logs/
 
 # Redis dump
 dump.rdb
+
+# But keep the public folder structure
+!frontend/public/
+!frontend/public/.gitkeep
