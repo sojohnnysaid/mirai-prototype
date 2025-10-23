@@ -11,7 +11,7 @@ export default function Dashboard() {
   return (
     <>
       <div className="bg-gray-200 rounded-2xl p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-900">WHATS NEW BANNER</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Something New!</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
