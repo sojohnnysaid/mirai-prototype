@@ -66,7 +66,7 @@ export default function CourseCreationModal({ isOpen, onClose }: CourseCreationM
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      AI-Powered Course Builder
+                      Create Course Using AI Prompts
                     </h3>
                     <p className="text-gray-600">
                       Start your first course design using AI prompts. Our intelligent system will guide you through creating engaging content step by step.
@@ -89,7 +89,7 @@ export default function CourseCreationModal({ isOpen, onClose }: CourseCreationM
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Import Documents & Videos
+                      Create Course Importing Your Documents
                     </h3>
                     <p className="text-gray-600">
                       Import PDF, DOCX, or MP4 files to start your development process. Transform your existing materials into interactive courses.
