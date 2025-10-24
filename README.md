@@ -1,6 +1,6 @@
 # 🚀 Mirai Prototype
 
-A GitOps-driven web application deployed on a Talos Linux Kubernetes homelab cluster using ArgoCD for continuous deployment and Cloudflare Tunnel for secure external access.
+A GitOps-driven web app deployed on a Talos Linux Kubernetes homelab cluster using ArgoCD for continuous deployment and Cloudflare Tunnel for secure external access.
 
 ---
 
