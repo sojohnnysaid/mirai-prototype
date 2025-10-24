@@ -57,13 +57,6 @@ export default function CourseBuilder() {
       case 1:
         return (
           <>
-            {/* Step Banner */}
-            <div className="bg-primary-50 rounded-2xl p-6 text-center mb-8">
-              <p className="text-gray-900 font-medium">
-                Start by defining your learning objectives and the key personas who will take this course.
-              </p>
-            </div>
-
             {/* Course Form */}
             <div className="bg-white border border-gray-200 rounded-2xl p-8 mb-8">
               <CourseForm />
