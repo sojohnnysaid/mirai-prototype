@@ -54,7 +54,7 @@ export default function TagsSelectionModal({
     }
   };
 
-  const filteredPredefinedTags = Object.entries(predefinedTags).reduce((acc, [category, tags]) => {
+  const filteredPredefinedTags = Object.entries(predefinedTags).reduce<Record<string, string[]>>((acc, [category, tags]) => {
     const filtered = tags.filter(tag =>
       tag.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -62,7 +62,7 @@ export default function TagsSelectionModal({
       acc[category] = filtered;
     }
     return acc;
-  }, {} as typeof predefinedTags);
+  }, {});
 
   const filteredSuggestedTags = suggestedTags.filter(tag =>
     tag.toLowerCase().includes(searchQuery.toLowerCase())
