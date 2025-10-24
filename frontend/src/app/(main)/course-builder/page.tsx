@@ -57,13 +57,6 @@ export default function CourseBuilder() {
       case 1:
         return (
           <>
-            {/* Step Banner */}
-            <div className="bg-primary-50 rounded-2xl p-6 text-center mb-8">
-              <p className="text-gray-900 font-medium">
-                Let's start by defining your course objectives and the key personas who will guide it.
-              </p>
-            </div>
-
             {/* Course Form */}
             <div className="bg-white border border-gray-200 rounded-2xl p-8 mb-8">
               <CourseForm />
@@ -73,14 +66,14 @@ export default function CourseBuilder() {
             <div className="bg-white border border-gray-200 rounded-2xl p-8 mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Course Perspectives{' '}
+                  Target Personas/Roles{' '}
                   <span className="text-gray-500 font-normal italic">
-                    (Add 1–4 personas who will guide the course creation process)
+                    (Add 1–4 personas who will take this course)
                   </span>
                 </h3>
               </div>
               <p className="text-sm text-gray-600 mb-6">
-                Defining personas ensures your content is tailored and relevant to the intended audience.
+                Define the personas and roles who will be taking this course to ensure the content is tailored and relevant.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -153,8 +146,8 @@ export default function CourseBuilder() {
       {/* Page Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Course Builder</h1>
-          <p className="text-gray-600">Prompt-based guided course creation</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Define your learning goal</h1>
+          <p className="text-gray-600">Your learning goals and the personas/roles who will take the courses generated</p>
         </div>
         <ProgressIndicator steps={5} currentStep={currentStep} />
       </div>
