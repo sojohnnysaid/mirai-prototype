@@ -69,7 +69,7 @@ export default function CourseCreationModal({ isOpen, onClose }: CourseCreationM
                       Create Course Using AI Prompts
                     </h3>
                     <p className="text-gray-600">
-                      Start your first course design using AI prompts. Our intelligent system will guide you through creating engaging content step by step.
+                      Design your course using AI prompts. Our intelligent system will guide you through creating engaging content step by step.
                     </p>
                     <div className="mt-3 text-primary-600 font-medium">
                       Recommended for new courses →
