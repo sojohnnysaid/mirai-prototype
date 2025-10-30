@@ -20,7 +20,8 @@ import {
   updateCourseBlock,
   removeCourseBlock,
   setActiveBlockId,
-  reorderCourseBlocks
+  reorderCourseBlocks,
+  setCurrentStep
 } from '@/store/slices/courseSlice';
 import { CourseBlock as CourseBlockType, BlockType } from '@/types';
 
