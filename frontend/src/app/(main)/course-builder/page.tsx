@@ -8,10 +8,12 @@ import {
   updatePersona,
   removePersona,
   setCurrentStep,
+  setLearningObjectives,
 } from '@/store/slices/courseSlice';
 import Button from '@/components/ui/Button';
 import CourseForm from '@/components/course/CourseForm';
 import PersonaCard from '@/components/course/PersonaCard';
+import LearningObjectivesForm from '@/components/course/LearningObjectivesForm';
 import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import { Info } from 'lucide-react';
 
@@ -39,6 +41,10 @@ export default function CourseBuilder() {
 
   const handleRemovePersona = (id: string) => {
     dispatch(removePersona(id));
+  };
+
+  const handleLearningObjectivesChange = (objectives: any[]) => {
+    dispatch(setLearningObjectives(objectives));
   };
 
   const handleNext = () => {
@@ -107,24 +113,16 @@ export default function CourseBuilder() {
             {/* Step Banner */}
             <div className="bg-primary-50 rounded-2xl p-6 text-center mb-8">
               <p className="text-gray-900 font-medium">
-                Now let's further define the audience and key personas related to this course.
+                Define what learners will achieve after completing this course. Each objective will create its own module.
               </p>
             </div>
 
-            {/* Learning Objectives */}
+            {/* Learning Objectives Form */}
             <div className="bg-white border border-gray-200 rounded-2xl p-8 mb-8">
-              <div className="flex items-center gap-3 mb-6">
-                <Info className="w-5 h-5 text-primary-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Learning Objectives</h3>
-              </div>
-              <p className="text-gray-600 mb-4">
-                After completing this course, the learner will be able to:
-              </p>
-              <ul className="list-disc list-inside text-gray-800 space-y-2">
-                <li>Learning Objective 1</li>
-                <li>Learning Objective 2</li>
-                <li>Learning Objective 3</li>
-              </ul>
+              <LearningObjectivesForm
+                objectives={currentCourse.learningObjectives || []}
+                onChange={handleLearningObjectivesChange}
+              />
             </div>
 
             <div className="flex justify-between">
