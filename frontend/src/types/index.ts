@@ -44,6 +44,11 @@ export interface CourseBlock {
   order: number;
 }
 
+export interface CourseAssessmentSettings {
+  enableEmbeddedKnowledgeChecks: boolean;
+  enableFinalExam: boolean;
+}
+
 export interface Course {
   id: string;
   title: string;
@@ -54,6 +59,7 @@ export interface Course {
   personas: Persona[];
   learningObjectives: LearningObjective[];
   sections: CourseSection[];
+  assessmentSettings?: CourseAssessmentSettings;
   createdAt: string;
   modifiedAt: string;
 }

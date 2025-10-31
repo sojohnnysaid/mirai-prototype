@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store';
 import { Edit2, CheckCircle, AlertCircle } from 'lucide-react';
-import { setCurrentStep, generateCourseSections } from '@/store/slices/courseSlice';
+import { setCurrentStep, generateCourseSections, setAssessmentSettings } from '@/store/slices/courseSlice';
 import {
   startGeneration,
   updateProgress,
@@ -58,8 +58,8 @@ export default function CourseReviewStep() {
     return (
       course.title &&
       course.desiredOutcome &&
-      course.personas?.length > 0 &&
-      course.learningObjectives?.length > 0
+      (course.personas?.length ?? 0) > 0 &&
+      (course.learningObjectives?.length ?? 0) > 0
     );
   };
 
@@ -106,8 +106,8 @@ export default function CourseReviewStep() {
             <div>
               <label className="text-sm font-medium text-gray-500">Category Tags</label>
               <div className="flex flex-wrap gap-1 mt-1">
-                {course.categoryTags?.length > 0 ? (
-                  course.categoryTags.map((tag, index) => (
+                {(course.categoryTags?.length ?? 0) > 0 ? (
+                  course.categoryTags?.map((tag, index) => (
                     <span
                       key={index}
                       className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full"
@@ -142,9 +142,9 @@ export default function CourseReviewStep() {
           </button>
         </div>
 
-        {course.learningObjectives?.length > 0 ? (
+        {(course.learningObjectives?.length ?? 0) > 0 ? (
           <ol className="space-y-2">
-            {course.learningObjectives.map((objective, index) => (
+            {course.learningObjectives?.map((objective, index) => (
               <li key={objective.id} className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-semibold">
                   {index + 1}
@@ -171,9 +171,9 @@ export default function CourseReviewStep() {
           </button>
         </div>
 
-        {course.personas?.length > 0 ? (
+        {(course.personas?.length ?? 0) > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {course.personas.map((persona) => (
+            {course.personas?.map((persona) => (
               <div key={persona.id} className="bg-gray-50 rounded-lg p-4">
                 <div className="font-semibold text-gray-900 mb-2">{persona.role}</div>
                 <div className="space-y-2 text-sm">
@@ -194,6 +194,82 @@ export default function CourseReviewStep() {
         ) : (
           <p className="text-gray-500">No target personas defined</p>
         )}
+      </div>
+
+      {/* Assessment Settings Section */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Assessment Settings</h3>
+        </div>
+
+        <div className="space-y-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={course.assessmentSettings?.enableEmbeddedKnowledgeChecks ?? true}
+              onChange={(e) => {
+                dispatch(setAssessmentSettings({
+                  enableEmbeddedKnowledgeChecks: e.target.checked
+                }));
+              }}
+              className="mt-1 w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+            />
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">
+                Include embedded knowledge checks
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                Add one multiple choice quiz question per lesson to reinforce learning throughout the course
+              </p>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={course.assessmentSettings?.enableFinalExam ?? true}
+              onChange={(e) => {
+                dispatch(setAssessmentSettings({
+                  enableFinalExam: e.target.checked
+                }));
+              }}
+              className="mt-1 w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+            />
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">
+                Include final exam
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                Add a comprehensive multiple choice exam at the end of the course covering all lessons
+              </p>
+            </div>
+          </label>
+        </div>
+
+        {/* Display current settings summary */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="text-sm text-gray-600">
+            <span className="font-medium">Current settings:</span>
+            <div className="mt-2 space-y-1">
+              {(course.assessmentSettings?.enableEmbeddedKnowledgeChecks ?? true) && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-green-600" />
+                  <span>Knowledge checks after each lesson</span>
+                </div>
+              )}
+              {(course.assessmentSettings?.enableFinalExam ?? true) && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-green-600" />
+                  <span>Final exam at course completion</span>
+                </div>
+              )}
+              {!(course.assessmentSettings?.enableEmbeddedKnowledgeChecks ?? true) &&
+               !(course.assessmentSettings?.enableFinalExam ?? true) && (
+                <div className="text-gray-500">No assessments configured</div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Validation Status */}

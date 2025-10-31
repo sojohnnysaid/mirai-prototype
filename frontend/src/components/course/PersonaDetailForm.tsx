@@ -53,7 +53,7 @@ export default function PersonaDetailForm() {
     }
 
     // Get generated content based on role
-    const generatedDetails = aiGeneratedContent.personaDetails[currentPersona.role] ||
+    const generatedDetails = aiGeneratedContent.personaDetails[currentPersona.role as keyof typeof aiGeneratedContent.personaDetails] ||
       aiGeneratedContent.personaDetails['Sales Rep'];
 
     // Update persona with generated content

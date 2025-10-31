@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Course, Persona, LearningObjective, CourseBlock, CourseSection } from '@/types';
+import { Course, Persona, LearningObjective, CourseBlock, CourseSection, CourseAssessmentSettings } from '@/types';
 
 interface CourseState {
   currentCourse: Partial<Course>;
@@ -16,6 +16,10 @@ const initialState: CourseState = {
     personas: [],
     learningObjectives: [],
     sections: [],
+    assessmentSettings: {
+      enableEmbeddedKnowledgeChecks: true,
+      enableFinalExam: true,
+    },
   },
   courses: [],
   currentStep: 1,
@@ -59,6 +63,18 @@ const courseSlice = createSlice({
     setLearningObjectives: (state, action: PayloadAction<LearningObjective[]>) => {
       state.currentCourse.learningObjectives = action.payload;
     },
+    setAssessmentSettings: (state, action: PayloadAction<Partial<CourseAssessmentSettings>>) => {
+      if (!state.currentCourse.assessmentSettings) {
+        state.currentCourse.assessmentSettings = {
+          enableEmbeddedKnowledgeChecks: true,
+          enableFinalExam: true,
+        };
+      }
+      state.currentCourse.assessmentSettings = {
+        ...state.currentCourse.assessmentSettings,
+        ...action.payload,
+      };
+    },
     setCurrentStep: (state, action: PayloadAction<number>) => {
       state.currentStep = action.payload;
     },
@@ -67,6 +83,10 @@ const courseSlice = createSlice({
         personas: [],
         learningObjectives: [],
         sections: [],
+        assessmentSettings: {
+          enableEmbeddedKnowledgeChecks: true,
+          enableFinalExam: true,
+        },
       };
       state.currentStep = 1;
     },
@@ -122,6 +142,7 @@ export const {
   updatePersona,
   removePersona,
   setLearningObjectives,
+  setAssessmentSettings,
   setCurrentStep,
   resetCourse,
   addCourse,
