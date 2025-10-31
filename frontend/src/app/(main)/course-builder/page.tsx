@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '@/store';
+import { RootState, AppDispatch } from '@/store';
 import {
   addPersona,
   updatePersona,
   removePersona,
   setCurrentStep,
+  createNewCourse,
+  saveCourse,
+  loadCourse,
 } from '@/store/slices/courseSlice';
 import Button from '@/components/ui/Button';
 import CourseForm from '@/components/course/CourseForm';
@@ -22,10 +25,73 @@ import AIGenerationModal from '@/components/ai/AIGenerationModal';
 import { Info } from 'lucide-react';
 
 export default function CourseBuilder() {
-  const dispatch = useDispatch();
-  const { currentCourse, currentStep } = useSelector((state: RootState) => state.course);
+  const dispatch = useDispatch<AppDispatch>();
+  const { currentCourse, currentStep, courseBlocks } = useSelector((state: RootState) => state.course);
   const { isGenerating } = useSelector((state: RootState) => state.aiGeneration);
   const [showAIModal, setShowAIModal] = useState(false);
+
+  // Use refs to track initialization state and prevent duplicate operations
+  const hasInitialized = useRef(false);
+  const isCreatingCourse = useRef(false);
+
+  // Create or load course on mount - ONLY ONCE
+  useEffect(() => {
+    // Prevent multiple initializations
+    if (hasInitialized.current) {
+      return;
+    }
+
+    // Check if we have a course ID in URL params (for editing existing course)
+    const urlParams = new URLSearchParams(window.location.search);
+    const courseId = urlParams.get('id');
+    const stepParam = urlParams.get('step');
+
+    // If step parameter is provided, jump directly to that step
+    if (stepParam) {
+      const step = parseInt(stepParam, 10);
+      if (step >= 1 && step <= 5) {
+        dispatch(setCurrentStep(step));
+      }
+    }
+
+    if (courseId && courseId !== currentCourse.id) {
+      // Load existing course only if it's different from current
+      hasInitialized.current = true;
+      dispatch(loadCourse(courseId));
+    } else if (!currentCourse.id && !courseId && !isCreatingCourse.current) {
+      // Only create a new course if:
+      // 1. We don't have a course ID in Redux state
+      // 2. We don't have a course ID in URL
+      // 3. We're not already creating a course
+      // 4. We haven't already initialized
+      isCreatingCourse.current = true;
+      hasInitialized.current = true;
+
+      const initializeCourse = async () => {
+        try {
+          await dispatch(createNewCourse({
+            title: '',
+            desiredOutcome: '',
+            destinationFolder: '',
+            categoryTags: [],
+            dataSource: 'open-web',
+            personas: [],
+            learningObjectives: [],
+            assessmentSettings: {
+              enableEmbeddedKnowledgeChecks: true,
+              enableFinalExam: true,
+            },
+          }));
+        } finally {
+          isCreatingCourse.current = false;
+        }
+      };
+      initializeCourse();
+    } else if (currentCourse.id) {
+      // We already have a course, mark as initialized
+      hasInitialized.current = true;
+    }
+  }, [currentCourse.id, dispatch]); // Include proper dependencies
 
   // ----------------------
   // Handlers
@@ -49,7 +115,20 @@ export default function CourseBuilder() {
     dispatch(removePersona(id));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    // Save progress before moving to next step
+    if (currentCourse.id) {
+      await dispatch(saveCourse({
+        id: currentCourse.id,
+        courseData: {
+          ...currentCourse,
+          content: {
+            sections: currentCourse.sections || [],
+            courseBlocks: courseBlocks || [],
+          },
+        },
+      }));
+    }
     if (currentStep < 5) dispatch(setCurrentStep(currentStep + 1));
   };
 

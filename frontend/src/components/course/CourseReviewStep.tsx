@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '@/store';
+import { RootState, AppDispatch } from '@/store';
 import { Edit2, CheckCircle, AlertCircle } from 'lucide-react';
-import { setCurrentStep, generateCourseSections, setAssessmentSettings } from '@/store/slices/courseSlice';
+import { setCurrentStep, generateCourseSections, setAssessmentSettings, saveCourse } from '@/store/slices/courseSlice';
 import {
   startGeneration,
   updateProgress,
@@ -13,7 +13,7 @@ import {
 import { mockGenerationDelays, docOMaticCourseSections } from '@/lib/docOMaticMockData';
 
 export default function CourseReviewStep() {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const course = useSelector((state: RootState) => state.course.currentCourse);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -43,8 +43,26 @@ export default function CourseReviewStep() {
       dispatch(updateProgress(step));
     }
 
-    // In a real app, this would save the generated sections
-    // For now, we'll just complete the generation
+    // Save the generated course with content blocks and sections
+    if (course.id) {
+      // Add the generated course blocks to the course
+      const courseDataToSave = {
+        ...course,
+        content: {
+          sections: docOMaticCourseSections,
+          courseBlocks: docOMaticCourseSections.flatMap(section =>
+            section.lessons.flatMap(lesson => lesson.blocks || [])
+          ),
+        },
+        status: 'generated', // Mark as generated so we know to go to editor
+      };
+
+      await dispatch(saveCourse({
+        id: course.id,
+        courseData: courseDataToSave,
+      }));
+    }
+
     dispatch(completeGeneration());
     setIsGenerating(false);
 

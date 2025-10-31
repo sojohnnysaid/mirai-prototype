@@ -1,42 +1,192 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store';
 import { setCourseField } from '@/store/slices/courseSlice';
-import Input from '@/components/ui/Input';
+import { createSelector } from '@reduxjs/toolkit';
 import FolderSelectionModal from './FolderSelectionModal';
 import TagsSelectionModal from './TagsSelectionModal';
 import DataSourceModal from './DataSourceModal';
 import { Folder, Plus, X, Hash, Database, Info } from 'lucide-react';
 
-export default function CourseForm() {
+// Create memoized selectors to prevent unnecessary re-renders
+// Use a constant for empty arrays to maintain referential equality
+const EMPTY_ARRAY: string[] = [];
+
+const selectCourseTitle = (state: RootState) => state.course.currentCourse.title || '';
+const selectCourseOutcome = (state: RootState) => state.course.currentCourse.desiredOutcome || '';
+const selectCourseFolder = (state: RootState) => state.course.currentCourse.destinationFolder || '';
+const selectCourseTags = (state: RootState) => state.course.currentCourse.categoryTags || EMPTY_ARRAY;
+const selectCourseDataSource = (state: RootState) => state.course.currentCourse.dataSource || '';
+
+// Optimized form field component that only re-renders when its specific value changes
+const FormField = memo(({
+  fieldName,
+  label,
+  placeholder,
+  type = 'text',
+  rows = 3,
+  selector,
+}: {
+  fieldName: string;
+  label: string;
+  placeholder?: string;
+  type?: 'text' | 'textarea';
+  rows?: number;
+  selector: (state: RootState) => any;
+}) => {
   const dispatch = useDispatch();
-  const { currentCourse } = useSelector((state: RootState) => state.course);
+  const value = useSelector(selector);
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      dispatch(setCourseField({ field: fieldName, value: e.target.value }));
+    },
+    [dispatch, fieldName]
+  );
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      {type === 'textarea' ? (
+        <textarea
+          value={value}
+          onChange={handleChange}
+          placeholder={placeholder}
+          rows={rows}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+        />
+      ) : (
+        <input
+          type="text"
+          value={value}
+          onChange={handleChange}
+          placeholder={placeholder}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+        />
+      )}
+    </div>
+  );
+});
+
+FormField.displayName = 'FormField';
+
+// Memoized components for folder, tags, and data source sections
+const FolderSection = memo(() => {
+  const dispatch = useDispatch();
+  const destinationFolder = useSelector(selectCourseFolder);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+
+  const handleFolderSelect = useCallback((folderName: string) => {
+    dispatch(setCourseField({ field: 'destinationFolder', value: folderName }));
+  }, [dispatch]);
+
+  return (
+    <>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Destination Folder
+        </label>
+        <button
+          type="button"
+          onClick={() => setIsFolderModalOpen(true)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-left"
+        >
+          <Folder className="w-4 h-4 text-gray-500" />
+          <span className={destinationFolder ? 'text-gray-900' : 'text-gray-500'}>
+            {destinationFolder || 'Select folder'}
+          </span>
+        </button>
+      </div>
+
+      <FolderSelectionModal
+        isOpen={isFolderModalOpen}
+        onClose={() => setIsFolderModalOpen(false)}
+        onSelect={handleFolderSelect}
+        selectedFolder={destinationFolder}
+      />
+    </>
+  );
+});
+
+FolderSection.displayName = 'FolderSection';
+
+const TagsSection = memo(() => {
+  const dispatch = useDispatch();
+  const categoryTags = useSelector(selectCourseTags);
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
+
+  const handleTagsChange = useCallback((tags: string[]) => {
+    dispatch(setCourseField({ field: 'categoryTags', value: tags }));
+  }, [dispatch]);
+
+  const handleRemoveTag = useCallback((tagToRemove: string) => {
+    const updatedTags = categoryTags.filter(tag => tag !== tagToRemove);
+    dispatch(setCourseField({ field: 'categoryTags', value: updatedTags }));
+  }, [categoryTags, dispatch]);
+
+  return (
+    <>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Category Tags
+        </label>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setIsTagsModalOpen(true)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-left"
+          >
+            <Hash className="w-4 h-4 text-gray-500" />
+            <span className="text-gray-500">
+              {categoryTags.length > 0 ? 'Add more tags' : 'Select tags'}
+            </span>
+          </button>
+          {categoryTags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {categoryTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-primary-100 text-primary-700"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tag)}
+                    className="hover:bg-primary-200 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <TagsSelectionModal
+        isOpen={isTagsModalOpen}
+        onClose={() => setIsTagsModalOpen(false)}
+        selectedTags={categoryTags}
+        onTagsChange={handleTagsChange}
+      />
+    </>
+  );
+});
+
+TagsSection.displayName = 'TagsSection';
+
+const DataSourceSection = memo(() => {
+  const dispatch = useDispatch();
+  const dataSource = useSelector(selectCourseDataSource);
   const [isDataSourceModalOpen, setIsDataSourceModalOpen] = useState(false);
 
-  const handleChange = (field: string, value: string | string[]) => {
-    dispatch(setCourseField({ field, value }));
-  };
-
-  const handleFolderSelect = (folderName: string) => {
-    handleChange('destinationFolder', folderName);
-  };
-
-  const handleTagsChange = (tags: string[]) => {
-    handleChange('categoryTags', tags);
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    const updatedTags = (currentCourse.categoryTags || []).filter(tag => tag !== tagToRemove);
-    handleChange('categoryTags', updatedTags);
-  };
-
-  const handleDataSourceSelect = (source: string) => {
-    handleChange('dataSource', source);
-  };
+  const handleDataSourceSelect = useCallback((source: string) => {
+    dispatch(setCourseField({ field: 'dataSource', value: source }));
+  }, [dispatch]);
 
   const getDataSourceDisplay = (sourceId: string | undefined) => {
     const sourceNames: { [key: string]: string } = {
@@ -53,136 +203,64 @@ export default function CourseForm() {
     return sourceId ? sourceNames[sourceId] || sourceId : null;
   };
 
+  const displayText = getDataSourceDisplay(dataSource);
+
   return (
-    <div className="space-y-6">
+    <>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Course Title
+          Data Source
         </label>
-        <input
-          type="text"
-          value={currentCourse.title || ''}
-          onChange={(e) => handleChange('title', e.target.value)}
-          placeholder="eg: Objection Handling and Discovery Best Practices"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-        />
+        <button
+          type="button"
+          onClick={() => setIsDataSourceModalOpen(true)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-left"
+        >
+          <Database className="w-4 h-4 text-gray-500" />
+          <span className={displayText ? 'text-gray-900' : 'text-gray-500'}>
+            {displayText || 'Select data source'}
+          </span>
+        </button>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Learning Goal
-        </label>
-        <textarea
-          value={currentCourse.desiredOutcome || ''}
-          onChange={(e) => handleChange('desiredOutcome', e.target.value)}
-          placeholder="Describe the learning goal and desired outcomes for this course"
-          rows={3}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Destination Folder
-          </label>
-          <button
-            type="button"
-            onClick={() => setIsFolderModalOpen(true)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <span className={currentCourse.destinationFolder ? 'text-gray-900' : 'text-gray-400'}>
-              {currentCourse.destinationFolder || 'Select a folder'}
-            </span>
-            <Folder className="w-5 h-5 text-gray-400" />
-          </button>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tags
-          </label>
-          <div className="w-full min-h-[42px] px-3 py-1.5 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent">
-            <div className="flex flex-wrap items-center gap-2">
-              {currentCourse.categoryTags?.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium"
-                >
-                  <Hash className="w-3 h-3" />
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag)}
-                    className="ml-0.5 hover:bg-primary-200 rounded-full p-0.5"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-              <button
-                type="button"
-                onClick={() => setIsTagsModalOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full text-sm font-medium transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add tags
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            Data Source
-            <button
-              type="button"
-              className="p-0.5 hover:bg-gray-100 rounded-full group relative"
-              onClick={(e) => e.preventDefault()}
-            >
-              <Info className="w-3.5 h-3.5 text-gray-400" />
-              <div className="absolute left-0 top-6 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50">
-                Select where AI will gather information for your course
-                <div className="absolute -top-1 left-2 w-2 h-2 bg-gray-900 rotate-45"></div>
-              </div>
-            </button>
-          </label>
-          <button
-            type="button"
-            onClick={() => setIsDataSourceModalOpen(true)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <span className={currentCourse.dataSource ? 'text-gray-900' : 'text-gray-400'}>
-              {getDataSourceDisplay(currentCourse.dataSource) || 'Select data source'}
-            </span>
-            <Database className="w-5 h-5 text-gray-400" />
-          </button>
-        </div>
-      </div>
-
-      {/* Folder Selection Modal */}
-      <FolderSelectionModal
-        isOpen={isFolderModalOpen}
-        onClose={() => setIsFolderModalOpen(false)}
-        onSelect={handleFolderSelect}
-        selectedFolder={currentCourse.destinationFolder}
-      />
-
-      {/* Tags Selection Modal */}
-      <TagsSelectionModal
-        isOpen={isTagsModalOpen}
-        onClose={() => setIsTagsModalOpen(false)}
-        selectedTags={currentCourse.categoryTags || []}
-        onTagsChange={handleTagsChange}
-      />
-
-      {/* Data Source Modal */}
       <DataSourceModal
         isOpen={isDataSourceModalOpen}
         onClose={() => setIsDataSourceModalOpen(false)}
-        selectedSource={currentCourse.dataSource}
+        selectedSource={dataSource}
         onSourceSelect={handleDataSourceSelect}
       />
+    </>
+  );
+});
+
+DataSourceSection.displayName = 'DataSourceSection';
+
+// Main CourseForm component - now optimized with proper memoization
+function CourseForm() {
+  return (
+    <div className="space-y-6">
+      <FormField
+        fieldName="title"
+        label="Course Title"
+        placeholder="eg: Objection Handling and Discovery Best Practices"
+        selector={selectCourseTitle}
+      />
+
+      <FormField
+        fieldName="desiredOutcome"
+        label="Learning Goal"
+        placeholder="Describe the learning goal and desired outcomes for this course"
+        type="textarea"
+        rows={3}
+        selector={selectCourseOutcome}
+      />
+
+      <FolderSection />
+      <TagsSection />
+      <DataSourceSection />
     </div>
   );
 }
+
+// Wrap the entire form in memo to prevent unnecessary re-renders from parent
+export default memo(CourseForm);
