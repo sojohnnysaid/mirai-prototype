@@ -24,6 +24,29 @@ export interface Lesson {
   id: string;
   title: string;
   content?: string;
+  blocks?: CourseBlock[];
+}
+
+export type BlockType = 'heading' | 'text' | 'interactive' | 'knowledgeCheck';
+
+export interface BlockAlignment {
+  personas: string[];
+  learningObjectives: string[];
+  kpis: string[];
+}
+
+export interface CourseBlock {
+  id: string;
+  type: BlockType;
+  content: string;
+  prompt?: string;
+  alignment?: BlockAlignment;
+  order: number;
+}
+
+export interface CourseAssessmentSettings {
+  enableEmbeddedKnowledgeChecks: boolean;
+  enableFinalExam: boolean;
 }
 
 export interface Course {
@@ -36,6 +59,7 @@ export interface Course {
   personas: Persona[];
   learningObjectives: LearningObjective[];
   sections: CourseSection[];
+  assessmentSettings?: CourseAssessmentSettings;
   createdAt: string;
   modifiedAt: string;
 }
