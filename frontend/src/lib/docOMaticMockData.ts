@@ -127,8 +127,18 @@ Each module addresses specific pain points in the document lifecycle, from creat
   {
     id: 'block-6',
     type: 'knowledgeCheck',
-    content: 'Match each Doc-O-Matic module with its primary business benefit',
-    prompt: 'Knowledge check on product capabilities',
+    content: JSON.stringify({
+      question: 'Which Doc-O-Matic module would best help a client who says "We spend hours copying data from our CRM into contracts"?',
+      options: [
+        'Template Designer - for creating document templates',
+        'Data Integration Hub - for connecting to enterprise systems',
+        'E-Signature Engine - for getting documents signed',
+        'Analytics Dashboard - for tracking metrics'
+      ],
+      correctAnswer: 1,
+      explanation: 'The Data Integration Hub provides pre-built connectors to 50+ enterprise systems including CRMs, allowing automatic data population in documents.'
+    }),
+    prompt: 'Knowledge check on matching solutions to client needs',
     order: 5,
     alignment: {
       personas: ['persona-1'],
@@ -267,8 +277,18 @@ Typical results:
   {
     id: 'block-15',
     type: 'knowledgeCheck',
-    content: 'Calculate the ROI for a company processing 10,000 documents monthly',
-    prompt: 'Final assessment on ROI calculation',
+    content: JSON.stringify({
+      question: 'A prospect processes 10,000 documents monthly, taking 15 minutes each. With Doc-O-Matic reducing time by 75%, what is the monthly time savings?',
+      options: [
+        '625 hours saved per month',
+        '1,250 hours saved per month',
+        '1,875 hours saved per month',
+        '2,500 hours saved per month'
+      ],
+      correctAnswer: 2,
+      explanation: 'Current time: 10,000 docs × 15 min = 150,000 min = 2,500 hours. With 75% reduction = 1,875 hours saved monthly. At $50/hour, that\'s $93,750 in monthly savings!'
+    }),
+    prompt: 'Knowledge check on ROI calculation',
     order: 14,
     alignment: {
       personas: ['persona-1'],
@@ -277,6 +297,69 @@ Typical results:
     },
   },
 ];
+
+// Final exam questions
+export const docOMaticFinalExam = {
+  title: 'Doc-O-Matic Sales Mastery Final Exam',
+  passingScore: 80,
+  questions: [
+    {
+      id: 'exam-q1',
+      question: 'What is Doc-O-Matic\'s primary differentiator compared to DocuSign?',
+      options: [
+        'Lower pricing',
+        'Better e-signature technology',
+        'Full document lifecycle automation beyond signatures',
+        'More integration options'
+      ],
+      correctAnswer: 2
+    },
+    {
+      id: 'exam-q2',
+      question: 'According to the IMPACT discovery framework, what does the "M" stand for?',
+      options: [
+        'Management approval process',
+        'Measure time and cost of manual tasks',
+        'Monthly document volume',
+        'Migration requirements'
+      ],
+      correctAnswer: 1
+    },
+    {
+      id: 'exam-q3',
+      question: 'What is the typical ROI timeline for Doc-O-Matic implementations?',
+      options: [
+        '1-2 months',
+        '3-4 months',
+        '6-9 months',
+        '12+ months'
+      ],
+      correctAnswer: 1
+    },
+    {
+      id: 'exam-q4',
+      question: 'Which Doc-O-Matic module includes pre-built connectors to enterprise systems?',
+      options: [
+        'Template Designer',
+        'Workflow Automation',
+        'Data Integration Hub',
+        'Analytics Dashboard'
+      ],
+      correctAnswer: 2
+    },
+    {
+      id: 'exam-q5',
+      question: 'What percentage reduction in errors do customers typically see with Doc-O-Matic?',
+      options: [
+        '50%',
+        '75%',
+        '90%',
+        '95%'
+      ],
+      correctAnswer: 2
+    }
+  ]
+};
 
 export const docOMaticCourseSections: CourseSection[] = [
   {
@@ -324,6 +407,17 @@ export const docOMaticCourseSections: CourseSection[] = [
         id: 'lesson-3-3',
         title: 'Building the Business Case',
         blocks: docOMaticCourseBlocks.filter(b => b.order >= 12 && b.order <= 14),
+      },
+    ],
+  },
+  {
+    id: 'section-4',
+    name: 'Final Assessment',
+    lessons: [
+      {
+        id: 'lesson-4-1',
+        title: 'Course Final Exam',
+        blocks: [], // Final exam will be handled separately in the UI
       },
     ],
   },

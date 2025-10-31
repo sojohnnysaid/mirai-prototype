@@ -13,7 +13,7 @@ import {
   X
 } from 'lucide-react';
 import { setCurrentStep } from '@/store/slices/courseSlice';
-import { docOMaticCourseSections } from '@/lib/docOMaticMockData';
+import { docOMaticCourseSections, docOMaticFinalExam } from '@/lib/docOMaticMockData';
 
 export default function CoursePreview() {
   const dispatch = useDispatch();
@@ -26,6 +26,10 @@ export default function CoursePreview() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [quizAnswers, setQuizAnswers] = useState<{[key: string]: number}>({});
+  const [showQuizFeedback, setShowQuizFeedback] = useState<{[key: string]: boolean}>({});
+  const [examAnswers, setExamAnswers] = useState<{[key: string]: number}>({});
+  const [showExamResults, setShowExamResults] = useState(false);
 
   const currentSection = docOMaticCourseSections[currentSectionIndex];
   const currentLesson = currentSection?.lessons[currentLessonIndex];
@@ -82,17 +86,83 @@ export default function CoursePreview() {
           </div>
         );
       case 'knowledgeCheck':
-        return (
-          <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 mb-4">
-            <div className="flex items-center gap-2 text-green-700 mb-2">
-              <span className="font-semibold">Knowledge Check</span>
+        try {
+          const quizData = JSON.parse(block.content);
+          const selectedAnswer = quizAnswers[block.id];
+          const showFeedback = showQuizFeedback[block.id];
+
+          return (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6 mb-4">
+              <div className="flex items-center gap-2 text-green-700 mb-4">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-semibold">Knowledge Check</span>
+              </div>
+
+              <p className="text-gray-800 font-medium mb-4">{quizData.question}</p>
+
+              <div className="space-y-2 mb-4">
+                {quizData.options.map((option: string, index: number) => (
+                  <label
+                    key={index}
+                    className={`block p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      selectedAnswer === index
+                        ? showFeedback
+                          ? index === quizData.correctAnswer
+                            ? 'border-green-500 bg-green-100'
+                            : 'border-red-500 bg-red-100'
+                          : 'border-green-400 bg-green-50'
+                        : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`quiz-${block.id}`}
+                      value={index}
+                      checked={selectedAnswer === index}
+                      onChange={() => setQuizAnswers({...quizAnswers, [block.id]: index})}
+                      className="mr-3"
+                      disabled={showFeedback}
+                    />
+                    <span className={`${showFeedback && index === quizData.correctAnswer ? 'font-semibold text-green-700' : ''}`}>
+                      {option}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              {!showFeedback ? (
+                <button
+                  onClick={() => setShowQuizFeedback({...showQuizFeedback, [block.id]: true})}
+                  disabled={selectedAnswer === undefined}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Submit Answer
+                </button>
+              ) : (
+                <div className={`p-4 rounded-lg ${selectedAnswer === quizData.correctAnswer ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  {selectedAnswer === quizData.correctAnswer ? (
+                    <p className="font-semibold">✅ Correct!</p>
+                  ) : (
+                    <p className="font-semibold">❌ Not quite right.</p>
+                  )}
+                  <p className="mt-2">{quizData.explanation}</p>
+                </div>
+              )}
             </div>
-            <p className="text-gray-700">{block.content}</p>
-            <button className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-              Take Quiz
-            </button>
-          </div>
-        );
+          );
+        } catch (e) {
+          // Fallback for old format
+          return (
+            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 mb-4">
+              <div className="flex items-center gap-2 text-green-700 mb-2">
+                <span className="font-semibold">Knowledge Check</span>
+              </div>
+              <p className="text-gray-700">{block.content}</p>
+            </div>
+          );
+        }
       default:
         return null;
     }
@@ -182,12 +252,132 @@ export default function CoursePreview() {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto p-8">
-            {/* Render lesson blocks */}
-            {currentLesson?.blocks?.map((block) => (
-              <div key={block.id}>
-                {renderBlockContent(block)}
+            {/* Check if this is the final exam lesson */}
+            {currentSection?.id === 'section-4' && currentLesson?.id === 'lesson-4-1' ? (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-lg p-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                    {docOMaticFinalExam.title}
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    Test your knowledge with this comprehensive exam covering all course materials.
+                    You need {docOMaticFinalExam.passingScore}% or higher to pass.
+                  </p>
+
+                  {!showExamResults ? (
+                    <>
+                      {docOMaticFinalExam.questions.map((question, index) => (
+                        <div key={question.id} className="bg-white rounded-lg p-6 mb-4 border border-gray-200">
+                          <p className="font-semibold text-gray-800 mb-4">
+                            {index + 1}. {question.question}
+                          </p>
+                          <div className="space-y-2">
+                            {question.options.map((option, optIndex) => (
+                              <label
+                                key={optIndex}
+                                className={`block p-3 rounded-lg border cursor-pointer transition-all ${
+                                  examAnswers[question.id] === optIndex
+                                    ? 'border-purple-400 bg-purple-50'
+                                    : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`exam-${question.id}`}
+                                  value={optIndex}
+                                  checked={examAnswers[question.id] === optIndex}
+                                  onChange={() => setExamAnswers({...examAnswers, [question.id]: optIndex})}
+                                  className="mr-3"
+                                />
+                                {option}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+
+                      <button
+                        onClick={() => setShowExamResults(true)}
+                        disabled={Object.keys(examAnswers).length < docOMaticFinalExam.questions.length}
+                        className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                      >
+                        Submit Exam
+                      </button>
+                    </>
+                  ) : (
+                    <div className="bg-white rounded-lg p-6">
+                      {(() => {
+                        const correctCount = docOMaticFinalExam.questions.filter(
+                          q => examAnswers[q.id] === q.correctAnswer
+                        ).length;
+                        const score = Math.round((correctCount / docOMaticFinalExam.questions.length) * 100);
+                        const passed = score >= docOMaticFinalExam.passingScore;
+
+                        return (
+                          <>
+                            <div className={`text-center mb-6 p-6 rounded-lg ${passed ? 'bg-green-50' : 'bg-red-50'}`}>
+                              <div className={`text-5xl font-bold mb-2 ${passed ? 'text-green-600' : 'text-red-600'}`}>
+                                {score}%
+                              </div>
+                              <p className={`text-xl font-semibold ${passed ? 'text-green-700' : 'text-red-700'}`}>
+                                {passed ? '🎉 Congratulations! You passed!' : '📚 Keep studying and try again!'}
+                              </p>
+                              <p className="text-gray-600 mt-2">
+                                You got {correctCount} out of {docOMaticFinalExam.questions.length} questions correct
+                              </p>
+                            </div>
+
+                            <div className="space-y-4">
+                              {docOMaticFinalExam.questions.map((question, index) => {
+                                const userAnswer = examAnswers[question.id];
+                                const isCorrect = userAnswer === question.correctAnswer;
+
+                                return (
+                                  <div key={question.id} className="border-l-4 pl-4" style={{borderColor: isCorrect ? '#10b981' : '#ef4444'}}>
+                                    <p className="font-medium mb-2">
+                                      {index + 1}. {question.question}
+                                    </p>
+                                    <p className="text-sm">
+                                      Your answer: <span className={isCorrect ? 'text-green-600' : 'text-red-600'}>
+                                        {question.options[userAnswer]}
+                                      </span>
+                                    </p>
+                                    {!isCorrect && (
+                                      <p className="text-sm text-gray-600 mt-1">
+                                        Correct answer: <span className="text-green-600">
+                                          {question.options[question.correctAnswer]}
+                                        </span>
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                setExamAnswers({});
+                                setShowExamResults(false);
+                              }}
+                              className="mt-6 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                            >
+                              Retake Exam
+                            </button>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
               </div>
-            ))}
+            ) : (
+              /* Render lesson blocks normally */
+              currentLesson?.blocks?.map((block) => (
+                <div key={block.id}>
+                  {renderBlockContent(block)}
+                </div>
+              ))
+            )}
 
             {/* Navigation */}
             <div className="flex items-center justify-between mt-12 pt-6 border-t border-gray-200">

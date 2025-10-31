@@ -130,13 +130,55 @@ export default function CourseBlock({
             <p className="text-gray-700">{block.content}</p>
           </div>
         ) : block.type === 'knowledgeCheck' ? (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-green-700 mb-2">
-              <CheckCircle size={16} />
-              <span className="font-medium">Knowledge Check</span>
-            </div>
-            <p className="text-gray-700">{block.content}</p>
-          </div>
+          (() => {
+            try {
+              const quizData = JSON.parse(block.content);
+              return (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-green-700 mb-3">
+                    <CheckCircle size={16} />
+                    <span className="font-medium">Knowledge Check</span>
+                  </div>
+                  <p className="text-gray-800 font-medium mb-3">{quizData.question}</p>
+                  <div className="space-y-1 text-sm">
+                    {quizData.options.map((option: string, index: number) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-xs ${
+                          index === quizData.correctAnswer
+                            ? 'border-green-500 bg-green-100 text-green-700'
+                            : 'border-gray-300'
+                        }`}>
+                          {index === quizData.correctAnswer && '✓'}
+                        </span>
+                        <span className={index === quizData.correctAnswer ? 'text-green-700 font-medium' : 'text-gray-600'}>
+                          {option}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {quizData.explanation && (
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <p className="text-xs text-gray-600">
+                        <span className="font-medium">Explanation:</span> {quizData.explanation}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            } catch (e) {
+              // Fallback for old format
+              return (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-green-700 mb-2">
+                    <CheckCircle size={16} />
+                    <span className="font-medium">Knowledge Check</span>
+                  </div>
+                  <p className="text-gray-700">{block.content}</p>
+                </div>
+              );
+            }
+          })()
+
         ) : (
           <div className="text-gray-700 whitespace-pre-wrap">{block.content}</div>
         )}
