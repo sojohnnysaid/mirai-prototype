@@ -1,0 +1,126 @@
+name: Build Frontend with Kustomize (GitOps)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/build-frontend-kustomize.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/mirai-frontend
+
+jobs:
+  build-and-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Need write to update manifests
+      packages: write  # Need write to push images
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Generate version info
+      id: version
+      run: |
+        # Generate version tag
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        BRANCH=${GITHUB_REF#refs/heads/}
+        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+        # For main branch, use SHA
+        if [ "$BRANCH" = "main" ]; then
+          VERSION="${SHORT_SHA}"
+        else
+          VERSION="${BRANCH}-${SHORT_SHA}"
+        fi
+
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+        echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+        echo "full-tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" >> $GITHUB_OUTPUT
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: true
+        tags: |
+          ${{ steps.version.outputs.full-tag }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.version.outputs.sha }}
+        labels: |
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.version=${{ steps.version.outputs.version }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Update Kustomization
+      run: |
+        # Install kustomize
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
+
+        # Update the image tag using kustomize
+        cd k8s/frontend
+        kustomize edit set image ghcr.io/sojohnnysaid/mirai-prototype/mirai-frontend=${{ steps.version.outputs.full-tag }}
+
+        # Show the changes
+        echo "Updated kustomization.yaml:"
+        cat kustomization.yaml | grep -A 2 "images:"
+
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+
+        git add k8s/frontend/kustomization.yaml
+
+        # Check if there are changes to commit
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "chore: update frontend image to ${{ steps.version.outputs.version }}
+
+          🤖 Automated image update by GitHub Actions
+          - Image: ${{ steps.version.outputs.full-tag }}
+          - Commit: ${{ github.sha }}
+
+          [skip ci]"
+
+          git push
+        fi
+
+    - name: Create deployment summary
+      run: |
+        echo "# 🚀 Frontend Deployment" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Image Details" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version:** \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Full Tag:** \`${{ steps.version.outputs.full-tag }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Next Steps" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Image built and pushed to GHCR" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Kustomization updated in Git" >> $GITHUB_STEP_SUMMARY
+        echo "⏳ ArgoCD will detect the change and deploy automatically" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "Monitor deployment in ArgoCD: [ArgoCD UI](https://argocd.example.com)" >> $GITHUB_STEP_SUMMARY

@@ -5,6 +5,11 @@ resources:
 - deployment.yaml
 - service.yaml
 
+# Image configuration - will be updated by CI/CD
+images:
+- name: ghcr.io/sojohnnysaid/mirai-prototype/mirai-frontend
+  newTag: latest  # CI/CD will update this with commit SHA
+
 namespace: default
 
 commonLabels:
