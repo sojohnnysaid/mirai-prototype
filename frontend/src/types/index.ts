@@ -60,6 +60,11 @@ export interface Course {
   learningObjectives: LearningObjective[];
   sections: CourseSection[];
   assessmentSettings?: CourseAssessmentSettings;
+  status?: 'draft' | 'published' | 'generated';
+  content?: {
+    sections?: CourseSection[];
+    courseBlocks?: CourseBlock[];
+  };
   createdAt: string;
   modifiedAt: string;
 }

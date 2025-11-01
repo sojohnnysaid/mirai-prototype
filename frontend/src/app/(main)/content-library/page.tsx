@@ -1,12 +1,83 @@
 'use client';
 
-import React, { useState } from 'react';
-import { mockFolders } from '@/lib/mockData';
-import { ChevronDown, ChevronRight, Folder, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Search, FileText, Users, User, Edit2, Eye } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+interface FolderNode {
+  id: string;
+  name: string;
+  type?: 'library' | 'team' | 'personal' | 'folder';
+  children?: FolderNode[];
+  courseCount?: number;
+}
+
+interface Course {
+  id: string;
+  title: string;
+  status: 'draft' | 'published' | 'generated';
+  folder: string;
+  tags: string[];
+  createdAt: string;
+  modifiedAt: string;
+}
 
 export default function ContentLibrary() {
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['hr']));
-  const [viewMode, setViewMode] = useState<'folder' | 'tag'>('folder');
+  const router = useRouter();
+  const [folders, setFolders] = useState<FolderNode[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['library', 'team', 'personal']));
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Load folders and courses on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+
+        // Load folders with course counts
+        const foldersResponse = await fetch('/api/folders?includeCourseCount=true');
+        if (foldersResponse.ok) {
+          const foldersResult = await foldersResponse.json();
+          setFolders(foldersResult.data);
+        }
+
+        // Load all courses
+        const coursesResponse = await fetch('/api/courses');
+        if (coursesResponse.ok) {
+          const coursesResult = await coursesResponse.json();
+          setCourses(coursesResult.data);
+        }
+      } catch (error) {
+        console.error('Failed to load data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Load courses for selected folder
+  useEffect(() => {
+    const loadFolderCourses = async () => {
+      if (!selectedFolderId) return;
+
+      try {
+        const response = await fetch(`/api/library?folder=${selectedFolderId}&includeSubfolders=true`);
+        if (response.ok) {
+          const result = await response.json();
+          setCourses(result.data.courses);
+        }
+      } catch (error) {
+        console.error('Failed to load folder courses:', error);
+      }
+    };
+
+    loadFolderCourses();
+  }, [selectedFolderId]);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders((prev) => {
@@ -16,35 +87,86 @@ export default function ContentLibrary() {
     });
   };
 
-  const renderFolder = (folder: any, level = 0) => {
+  const handleFolderClick = (folderId: string) => {
+    setSelectedFolderId(folderId);
+  };
+
+  const handleCourseClick = (courseId: string) => {
+    router.push(`/course-builder?id=${courseId}&step=4`);
+  };
+
+  const renderFolder = (folder: FolderNode, level = 0) => {
     const isExpanded = expandedFolders.has(folder.id);
-    const hasChildren = folder.children?.length > 0;
+    const hasChildren = folder.children && folder.children.length > 0;
+    const isSelected = selectedFolderId === folder.id;
+
+    const getIcon = () => {
+      if (folder.type === 'library') return <FolderOpen className="w-5 h-5 text-purple-600" />;
+      if (folder.type === 'team') return <Users className="w-5 h-5 text-blue-600" />;
+      if (folder.type === 'personal') return <User className="w-5 h-5 text-green-600" />;
+      if (isExpanded) return <FolderOpen className="w-5 h-5 text-yellow-600" />;
+      return <Folder className="w-5 h-5 text-gray-600" />;
+    };
 
     return (
-      <div key={folder.id} style={{ marginLeft: `${level * 20}px` }}>
+      <div key={folder.id}>
         <div
-          className="flex items-center gap-2 py-2 px-3 hover:bg-gray-100 rounded-lg cursor-pointer"
-          onClick={() => hasChildren && toggleFolder(folder.id)}
+          className={`
+            flex items-center gap-2 py-2 px-3 rounded-lg cursor-pointer transition-colors
+            ${isSelected ? 'bg-white shadow-sm' : 'hover:bg-primary-100'}
+          `}
+          style={{ paddingLeft: `${level * 20 + 12}px` }}
+          onClick={() => {
+            if (hasChildren) {
+              toggleFolder(folder.id);
+            }
+            handleFolderClick(folder.id);
+          }}
         >
           {hasChildren && (
-            <span className="text-gray-600">
+            <button
+              className="text-gray-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFolder(folder.id);
+              }}
+            >
               {isExpanded ? (
                 <ChevronDown className="w-4 h-4" />
               ) : (
                 <ChevronRight className="w-4 h-4" />
               )}
+            </button>
+          )}
+          {getIcon()}
+          <span className="font-medium text-gray-900 flex-1">{folder.name}</span>
+          {folder.courseCount !== undefined && folder.courseCount > 0 && (
+            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+              {folder.courseCount}
             </span>
           )}
-          <Folder className="w-5 h-5 text-gray-600" />
-          <span className="font-medium text-gray-900">{folder.name}</span>
         </div>
 
         {isExpanded &&
           hasChildren &&
-          folder.children.map((child: any) => renderFolder(child, level + 1))}
+          folder.children!.map((child) => renderFolder(child, level + 1))}
       </div>
     );
   };
+
+  const filteredCourses = courses.filter(course => {
+    if (!searchQuery) return true;
+
+    const query = searchQuery.toLowerCase();
+    // Search in title
+    const titleMatch = course.title.toLowerCase().includes(query);
+    // Search in tags
+    const tagMatch = course.tags && course.tags.some(tag =>
+      tag.toLowerCase().includes(query)
+    );
+
+    return titleMatch || tagMatch;
+  });
 
   return (
     <>
@@ -60,71 +182,111 @@ export default function ContentLibrary() {
       <div className="flex gap-6">
         {/* Left: Folder Sidebar */}
         <div className="w-80 bg-primary-50 border border-gray-200 rounded-2xl p-4 h-[calc(100vh-200px)] overflow-y-auto">
-          <div className="space-y-3 mb-6">
-            <button
-              className={`w-full text-left px-4 py-2 rounded-lg font-medium ${
-                viewMode === 'folder'
-                  ? 'bg-white text-gray-900'
-                  : 'bg-primary-100 hover:bg-primary-200 text-gray-700'
-              }`}
-              onClick={() => setViewMode('folder')}
-            >
-              Folder View
-            </button>
-            <button
-              className={`w-full text-left px-4 py-2 rounded-lg font-medium ${
-                viewMode === 'tag'
-                  ? 'bg-white text-gray-900'
-                  : 'bg-primary-100 hover:bg-primary-200 text-gray-700'
-              }`}
-              onClick={() => setViewMode('tag')}
-            >
-              Tag/Category View
-            </button>
-          </div>
-
-          <div className="space-y-2">{mockFolders.map((f) => renderFolder(f))}</div>
+          {loading ? (
+            <div className="text-center text-gray-600 py-4">Loading folders...</div>
+          ) : (
+            <div className="space-y-2">
+              {folders.map((folder) => renderFolder(folder))}
+            </div>
+          )}
         </div>
 
         {/* Right: Main Content */}
         <div className="flex-1 bg-white border border-gray-200 rounded-2xl p-6">
-          <div className="grid grid-cols-4 gap-4 mb-4">
+          <div className="mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search"
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                placeholder="Search courses..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full max-w-md pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
               />
             </div>
-            <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
-              <option>Owner</option>
-            </select>
-            <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
-              <option>Tags</option>
-            </select>
-            <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
-              <option>Modified Date</option>
-            </select>
           </div>
 
-          <div className="border-b border-gray-300 pb-3 mb-6 grid grid-cols-4 gap-4 font-semibold text-gray-900">
-            <div>Name</div>
-            <div>Owner</div>
-            <div>Tags</div>
-            <div>Modified Date</div>
-          </div>
+          {loading ? (
+            <div className="text-center text-gray-600 py-12">Loading courses...</div>
+          ) : filteredCourses.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredCourses.map((course) => (
+                <div
+                  key={course.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => handleCourseClick(course.id)}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900 line-clamp-2">
+                        {course.title || 'Untitled Course'}
+                      </h3>
+                    </div>
+                    <FileText className="w-5 h-5 text-gray-400" />
+                  </div>
 
-          <div className="flex-1 flex items-center justify-center h-64">
-            <div className="text-center text-gray-400">
-              <Folder className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg">No content in this folder</p>
-              <p className="text-sm">Select a folder to view its contents</p>
+                  {course.tags && course.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {course.tags.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {course.tags.length > 3 && (
+                        <span className="text-xs text-gray-500">
+                          +{course.tags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="text-xs text-gray-500">
+                    Modified {new Date(course.modifiedAt).toLocaleDateString()}
+                  </div>
+
+                  <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+                    <button
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 text-sm text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCourseClick(course.id);
+                      }}
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/course-builder?id=${course.id}&step=5`);
+                      }}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Preview
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-12">
+              <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {selectedFolderId ? 'No courses in this folder' : 'Select a folder'}
+              </h3>
+              <p className="text-gray-600">
+                {selectedFolderId
+                  ? 'Create your first course in this folder to get started.'
+                  : 'Choose a folder from the sidebar to view its contents.'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </>
   );
 }
-
