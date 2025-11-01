@@ -39,8 +39,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy public folder
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy data folder for local development fallback
-COPY --from=builder --chown=nextjs:nodejs /app/data ./data
+# Create data directory (data will be in MinIO, not in container)
+RUN mkdir -p data && chown -R nextjs:nodejs data
 
 USER nextjs
 
