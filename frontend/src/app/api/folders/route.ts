@@ -6,14 +6,44 @@ import {
   getFolderPath
 } from '@/lib/storage/courseStorage';
 
-// GET /api/folders - Get hierarchical folder structure
+// GET /api/folders - Get hierarchical folder structure or specific folder details
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const folderId = searchParams.get('id');
     const format = searchParams.get('format') || 'hierarchy';
     const includeCourseCount = searchParams.get('includeCourseCount') === 'true';
 
     const folders = await getFolders();
+
+    // If requesting specific folder details
+    if (folderId) {
+      const folder = folders.find(f => f.id === folderId);
+
+      if (!folder) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Folder not found',
+          },
+          { status: 404 }
+        );
+      }
+
+      const folderPath = await getFolderPath(folderId);
+      const courses = await getCoursesByFolder(folderId, false);
+      const subfolderCourses = await getCoursesByFolder(folderId, true);
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          ...folder,
+          path: folderPath,
+          courseCount: courses.length,
+          totalCourseCount: subfolderCourses.length,
+        },
+      });
+    }
 
     let result: any;
 
@@ -64,54 +94,3 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// GET /api/folders/[id] - Get specific folder details
-export async function GET_FOLDER(request: NextRequest) {
-  try {
-    const folderId = request.nextUrl.pathname.split('/').pop();
-    if (!folderId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Folder ID is required',
-        },
-        { status: 400 }
-      );
-    }
-
-    const folders = await getFolders();
-    const folder = folders.find(f => f.id === folderId);
-
-    if (!folder) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Folder not found',
-        },
-        { status: 404 }
-      );
-    }
-
-    const folderPath = await getFolderPath(folderId);
-    const courses = await getCoursesByFolder(folderId, false);
-    const subfolderCourses = await getCoursesByFolder(folderId, true);
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...folder,
-        path: folderPath,
-        courseCount: courses.length,
-        totalCourseCount: subfolderCourses.length,
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching folder details:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch folder details',
-      },
-      { status: 500 }
-    );
-  }
-}

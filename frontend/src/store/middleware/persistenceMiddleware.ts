@@ -16,7 +16,7 @@ const debouncedSave = debounce(
   500 // Wait 500ms after the last change before saving
 );
 
-export const persistenceMiddleware: Middleware = (storeAPI) => (next) => (action) => {
+export const persistenceMiddleware: Middleware = (storeAPI) => (next) => (action: any) => {
   // Track course creation state
   if (action.type === 'course/createNewCourse/pending') {
     isCreatingCourse = true;

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 interface FolderNode {
   id: string;
   name: string;
-  type?: 'team' | 'personal' | 'folder';
+  type?: 'library' | 'team' | 'personal' | 'folder';
   children?: FolderNode[];
   courseCount?: number;
 }
@@ -27,7 +27,7 @@ export default function ContentLibrary() {
   const [folders, setFolders] = useState<FolderNode[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['team', 'personal']));
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['library', 'team', 'personal']));
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -101,6 +101,7 @@ export default function ContentLibrary() {
     const isSelected = selectedFolderId === folder.id;
 
     const getIcon = () => {
+      if (folder.type === 'library') return <FolderOpen className="w-5 h-5 text-purple-600" />;
       if (folder.type === 'team') return <Users className="w-5 h-5 text-blue-600" />;
       if (folder.type === 'personal') return <User className="w-5 h-5 text-green-600" />;
       if (isExpanded) return <FolderOpen className="w-5 h-5 text-yellow-600" />;

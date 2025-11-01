@@ -252,7 +252,7 @@ const courseSlice = createSlice({
           title: state.currentCourse.title || action.payload.title || '',
           desiredOutcome: state.currentCourse.desiredOutcome || action.payload.desiredOutcome || '',
           destinationFolder: state.currentCourse.destinationFolder || action.payload.destinationFolder || '',
-          categoryTags: state.currentCourse.categoryTags?.length > 0
+          categoryTags: state.currentCourse.categoryTags && state.currentCourse.categoryTags.length > 0
             ? state.currentCourse.categoryTags
             : action.payload.categoryTags || [],
           dataSource: state.currentCourse.dataSource || action.payload.dataSource || 'open-web',

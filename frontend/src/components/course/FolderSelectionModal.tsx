@@ -6,7 +6,7 @@ import { Folder, FolderOpen, ChevronRight, ChevronDown, X, Users, User } from 'l
 interface FolderNode {
   id: string;
   name: string;
-  type?: 'team' | 'personal' | 'folder';
+  type?: 'library' | 'team' | 'personal' | 'folder';
   children?: FolderNode[];
 }
 
@@ -27,7 +27,7 @@ export default function FolderSelectionModal({
   const [loading, setLoading] = useState(true);
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set(['team', 'personal'])
+    new Set(['library', 'team', 'personal'])
   );
 
   // Load folder structure from API

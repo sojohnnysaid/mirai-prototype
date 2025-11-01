@@ -122,10 +122,7 @@ export default function CourseBuilder() {
         id: currentCourse.id,
         courseData: {
           ...currentCourse,
-          content: {
-            sections: currentCourse.sections || [],
-            courseBlocks: courseBlocks || [],
-          },
+          sections: currentCourse.sections || [],
         },
       }));
     }

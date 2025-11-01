@@ -77,15 +77,24 @@ async function ensureDirectories() {
         lastUpdated: new Date().toISOString(),
         courses: [],
         folders: [
-          { id: 'hr', name: 'Human Resources', parent: null, children: ['compliance', 'onboarding'] },
-          { id: 'compliance', name: 'Compliance', parent: 'hr', children: [] },
-          { id: 'onboarding', name: 'Onboarding', parent: 'hr', children: [] },
-          { id: 'sales', name: 'Sales', parent: null, children: ['product-training', 'skills'] },
-          { id: 'product-training', name: 'Product Training', parent: 'sales', children: [] },
-          { id: 'skills', name: 'Skills Development', parent: 'sales', children: [] },
-          { id: 'it', name: 'IT', parent: null, children: ['security', 'software'] },
-          { id: 'security', name: 'Security', parent: 'it', children: [] },
-          { id: 'software', name: 'Software Training', parent: 'it', children: [] }
+          // Root Library folder
+          { id: 'library', name: 'Library', parent: null, type: 'library', children: ['team', 'personal'] },
+
+          // Team folders
+          { id: 'team', name: 'Team-Name', parent: 'library', type: 'team', children: ['hr', 'sales', 'product', 'engineering'] },
+          { id: 'hr', name: 'Human Resources', parent: 'team', type: 'folder', children: ['onboarding', 'training', 'compliance'] },
+          { id: 'onboarding', name: 'Onboarding', parent: 'hr', type: 'folder', children: [] },
+          { id: 'training', name: 'Training', parent: 'hr', type: 'folder', children: [] },
+          { id: 'compliance', name: 'Compliance', parent: 'hr', type: 'folder', children: [] },
+          { id: 'sales', name: 'Sales Enablement', parent: 'team', type: 'folder', children: [] },
+          { id: 'product', name: 'Product', parent: 'team', type: 'folder', children: [] },
+          { id: 'engineering', name: 'Engineering', parent: 'team', type: 'folder', children: [] },
+
+          // Personal folders
+          { id: 'personal', name: 'Personal', parent: 'library', type: 'personal', children: ['my-drafts', 'completed-courses', 'shared-with-me'] },
+          { id: 'my-drafts', name: 'My Drafts', parent: 'personal', type: 'folder', children: [] },
+          { id: 'completed-courses', name: 'Completed Courses', parent: 'personal', type: 'folder', children: [] },
+          { id: 'shared-with-me', name: 'Shared with Me', parent: 'personal', type: 'folder', children: [] }
         ]
       };
       await fs.writeFile(LIBRARY_FILE, JSON.stringify(initialLibrary, null, 2));

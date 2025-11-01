@@ -54,7 +54,7 @@ export default function CourseReviewStep() {
             section.lessons.flatMap(lesson => lesson.blocks || [])
           ),
         },
-        status: 'generated', // Mark as generated so we know to go to editor
+        status: 'generated' as const, // Mark as generated so we know to go to editor
       };
 
       await dispatch(saveCourse({

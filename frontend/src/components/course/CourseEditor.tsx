@@ -49,7 +49,7 @@ export default function CourseEditor() {
     // Only add mock data if there are no blocks AND no saved content
     if (courseBlocks.length === 0) {
       // Check if course has saved content blocks
-      if (course.content?.courseBlocks?.length > 0) {
+      if (course.content?.courseBlocks && course.content.courseBlocks.length > 0) {
         // Load the saved course blocks
         course.content.courseBlocks.forEach((block: CourseBlockType) => {
           dispatch(addCourseBlock(block));
@@ -196,7 +196,10 @@ export default function CourseEditor() {
                       icon: <ArrowLeft className="w-4 h-4" />,
                       onClick: () => dispatch(setCurrentStep(3)),
                     },
-                    { divider: true },
+                    {
+                      label: '',
+                      divider: true,
+                    },
                     {
                       label: 'Edit Course Settings',
                       icon: <Settings className="w-4 h-4" />,
@@ -207,7 +210,10 @@ export default function CourseEditor() {
                       icon: <FileText className="w-4 h-4" />,
                       onClick: () => dispatch(setCurrentStep(2)),
                     },
-                    { divider: true },
+                    {
+                      label: '',
+                      divider: true,
+                    },
                     {
                       label: 'Save & Exit',
                       icon: <Save className="w-4 h-4" />,
