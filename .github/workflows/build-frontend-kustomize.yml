@@ -91,9 +91,16 @@ jobs:
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
 
-        # Pull latest changes first to avoid conflicts
+        # Stash any local changes to handle clean rebase
+        git stash --include-untracked
+
+        # Pull latest changes
         git pull origin main --rebase
 
+        # Pop the stashed changes back
+        git stash pop || true
+
+        # Stage the kustomization changes
         git add k8s/frontend/kustomization.yaml
 
         # Check if there are changes to commit
