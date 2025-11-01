@@ -87,6 +87,11 @@ interface CourseState {
 
 const initialState: CourseState = {
   currentCourse: {
+    title: '',
+    desiredOutcome: '',
+    destinationFolder: '',
+    categoryTags: [],
+    dataSource: 'open-web',
     personas: [],
     learningObjectives: [],
     sections: [],
@@ -239,32 +244,19 @@ const courseSlice = createSlice({
       })
       .addCase(createNewCourse.fulfilled, (state, action) => {
         state.isSaving = false;
-        // Only update with the new course if we don't have user input yet
-        // This preserves any fields that were set while the API call was in flight
-        if (!state.currentCourse.title && !state.currentCourse.desiredOutcome) {
-          state.currentCourse = action.payload;
-        } else {
-          // Merge the API response with existing user input
-          state.currentCourse = {
-            ...state.currentCourse,
-            id: action.payload.id, // Always use the new ID from API
-            // Preserve user input for these fields if they exist
-            title: state.currentCourse.title || action.payload.title,
-            desiredOutcome: state.currentCourse.desiredOutcome || action.payload.desiredOutcome,
-            destinationFolder: state.currentCourse.destinationFolder || action.payload.destinationFolder,
-            categoryTags: state.currentCourse.categoryTags?.length > 0
-              ? state.currentCourse.categoryTags
-              : action.payload.categoryTags,
-            dataSource: state.currentCourse.dataSource || action.payload.dataSource,
-            personas: state.currentCourse.personas?.length > 0
-              ? state.currentCourse.personas
-              : action.payload.personas,
-            learningObjectives: state.currentCourse.learningObjectives?.length > 0
-              ? state.currentCourse.learningObjectives
-              : action.payload.learningObjectives,
-            assessmentSettings: state.currentCourse.assessmentSettings || action.payload.assessmentSettings,
-          };
-        }
+        // Merge the API response with existing state, preserving user input
+        state.currentCourse = {
+          ...state.currentCourse,
+          ...action.payload,
+          // Always preserve user input for form fields since they have proper defaults now
+          title: state.currentCourse.title || action.payload.title || '',
+          desiredOutcome: state.currentCourse.desiredOutcome || action.payload.desiredOutcome || '',
+          destinationFolder: state.currentCourse.destinationFolder || action.payload.destinationFolder || '',
+          categoryTags: state.currentCourse.categoryTags?.length > 0
+            ? state.currentCourse.categoryTags
+            : action.payload.categoryTags || [],
+          dataSource: state.currentCourse.dataSource || action.payload.dataSource || 'open-web',
+        };
         state.courseBlocks = action.payload.content?.courseBlocks || [];
       })
       .addCase(createNewCourse.rejected, (state, action) => {

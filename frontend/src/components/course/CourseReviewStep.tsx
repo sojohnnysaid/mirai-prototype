@@ -66,10 +66,8 @@ export default function CourseReviewStep() {
     dispatch(completeGeneration());
     setIsGenerating(false);
 
-    // Move to the next step (Course Editor)
-    setTimeout(() => {
-      dispatch(setCurrentStep(4));
-    }, 1500);
+    // Move to the next step (Course Editor) immediately
+    dispatch(setCurrentStep(4));
   };
 
   const isReadyToGenerate = () => {

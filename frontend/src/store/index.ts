@@ -18,6 +18,11 @@ const getPreloadedState = () => {
   // Merge restored state with initial state to ensure all required fields exist
   const initialCourseState = {
     currentCourse: {
+      title: '',
+      desiredOutcome: '',
+      destinationFolder: '',
+      categoryTags: [],
+      dataSource: 'open-web',
       personas: [],
       learningObjectives: [],
       sections: [],
