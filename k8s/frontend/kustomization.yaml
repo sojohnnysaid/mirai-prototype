@@ -8,7 +8,8 @@ resources:
 # Image configuration - will be updated by CI/CD
 images:
 - name: ghcr.io/sojohnnysaid/mirai-prototype/mirai-frontend
-  newTag: latest  # CI/CD will update this with commit SHA
+  newName: ghcr.io/sojohnnysaid/mirai-prototype/mirai-frontend
+  newTag: "8252438"
 
 namespace: default
 
