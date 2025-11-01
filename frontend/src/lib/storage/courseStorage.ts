@@ -82,13 +82,29 @@ async function ensureDirectories() {
 
           // Team folders
           { id: 'team', name: 'Team-Name', parent: 'library', type: 'team', children: ['hr', 'sales', 'product', 'engineering'] },
+
+          // Human Resources and its subfolders
           { id: 'hr', name: 'Human Resources', parent: 'team', type: 'folder', children: ['onboarding', 'training', 'compliance'] },
           { id: 'onboarding', name: 'Onboarding', parent: 'hr', type: 'folder', children: [] },
           { id: 'training', name: 'Training', parent: 'hr', type: 'folder', children: [] },
           { id: 'compliance', name: 'Compliance', parent: 'hr', type: 'folder', children: [] },
-          { id: 'sales', name: 'Sales Enablement', parent: 'team', type: 'folder', children: [] },
-          { id: 'product', name: 'Product', parent: 'team', type: 'folder', children: [] },
-          { id: 'engineering', name: 'Engineering', parent: 'team', type: 'folder', children: [] },
+
+          // Sales Enablement and its subfolders
+          { id: 'sales', name: 'Sales Enablement', parent: 'team', type: 'folder', children: ['sales-product-knowledge', 'sales-skills', 'sales-tools'] },
+          { id: 'sales-product-knowledge', name: 'Product Knowledge', parent: 'sales', type: 'folder', children: [] },
+          { id: 'sales-skills', name: 'Sales Skills', parent: 'sales', type: 'folder', children: [] },
+          { id: 'sales-tools', name: 'Tools & Systems', parent: 'sales', type: 'folder', children: [] },
+
+          // Product and its subfolders
+          { id: 'product', name: 'Product', parent: 'team', type: 'folder', children: ['product-features', 'product-roadmap'] },
+          { id: 'product-features', name: 'Feature Training', parent: 'product', type: 'folder', children: [] },
+          { id: 'product-roadmap', name: 'Roadmap', parent: 'product', type: 'folder', children: [] },
+
+          // Engineering and its subfolders
+          { id: 'engineering', name: 'Engineering', parent: 'team', type: 'folder', children: ['eng-backend', 'eng-frontend', 'eng-devops'] },
+          { id: 'eng-backend', name: 'Backend Development', parent: 'engineering', type: 'folder', children: [] },
+          { id: 'eng-frontend', name: 'Frontend Development', parent: 'engineering', type: 'folder', children: [] },
+          { id: 'eng-devops', name: 'DevOps', parent: 'engineering', type: 'folder', children: [] },
 
           // Personal folders
           { id: 'personal', name: 'Personal', parent: 'library', type: 'personal', children: ['my-drafts', 'completed-courses', 'shared-with-me'] },
