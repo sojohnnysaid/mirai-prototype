@@ -102,3 +102,15 @@ frontend/data/
 # But keep the public folder structure
 !frontend/public/
 !frontend/public/.gitkeep
+
+# MinIO/S3 secrets - never commit these
+k8s/minio-secret.yaml
+k8s/*-secret.yaml
+.env.local
+.env.production.local
+
+# MinIO/S3 secrets - never commit these
+k8s/minio-secret.yaml
+k8s/*-secret.yaml
+.env.local
+.env.production.local

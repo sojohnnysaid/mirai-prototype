@@ -1,0 +1,28 @@
+# MinIO Configuration for Kubernetes
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minio-operator
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-credentials
+  namespace: default
+type: Opaque
+stringData:
+  # Update these with your actual MinIO credentials
+  accesskey: "minioadmin"  # Replace with your MinIO access key
+  secretkey: "minioadmin"  # Replace with your MinIO secret key
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: minio-config
+  namespace: default
+data:
+  # Update this with your Unraid server IP
+  MINIO_ENDPOINT: "192.168.1.XXX:9000"  # Replace XXX with your Unraid IP
+  MINIO_USE_SSL: "false"
+  MINIO_REGION: "us-east-1"

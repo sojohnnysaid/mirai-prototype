@@ -1,0 +1,15 @@
+# Test pod to verify MinIO connectivity
+apiVersion: v1
+kind: Pod
+metadata:
+  name: minio-test
+  namespace: default
+spec:
+  containers:
+  - name: minio-client
+    image: minio/mc:latest
+    command: ["sleep", "3600"]
+    env:
+    - name: MC_HOST_minio
+      value: "http://root:!J0hnny12345$@192.168.1.226:9768"
+  restartPolicy: Never
