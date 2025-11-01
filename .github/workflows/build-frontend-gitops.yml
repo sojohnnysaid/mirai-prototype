@@ -70,6 +70,9 @@ jobs:
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
 
+        # Pull latest changes first to avoid conflicts
+        git pull origin main --rebase
+
         git add k8s/frontend/deployment.yaml
 
         # Only commit if there are changes
@@ -77,7 +80,26 @@ jobs:
           echo "No changes to commit"
         else
           git commit -m "chore: update frontend image to ${{ steps.image-tag.outputs.tag }} [skip ci]"
-          git push
+
+          # Push with retry logic
+          max_retries=3
+          retry_count=0
+
+          while [ $retry_count -lt $max_retries ]; do
+            if git push; then
+              echo "Successfully pushed changes"
+              break
+            else
+              echo "Push failed, pulling and retrying..."
+              git pull origin main --rebase
+              ((retry_count++))
+            fi
+          done
+
+          if [ $retry_count -eq $max_retries ]; then
+            echo "Failed to push after $max_retries attempts"
+            exit 1
+          fi
         fi
 
     - name: Output summary
