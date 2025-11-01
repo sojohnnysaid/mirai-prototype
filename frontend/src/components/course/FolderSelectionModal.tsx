@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Folder, FolderOpen, ChevronRight, ChevronDown, X, Users, User } from 'lucide-react';
 
 interface FolderNode {
   id: string;
   name: string;
-  type: 'team' | 'personal' | 'folder';
+  type?: 'team' | 'personal' | 'folder';
   children?: FolderNode[];
 }
 
 interface FolderSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (folder: string) => void;
+  onSelect: (folderId: string, folderName: string) => void;
   selectedFolder?: string;
 }
 
@@ -23,83 +23,51 @@ export default function FolderSelectionModal({
   onSelect,
   selectedFolder
 }: FolderSelectionModalProps) {
-  // Hardcoded folder structure
-  const folderStructure: FolderNode[] = [
-    {
-      id: 'team',
-      name: 'Team-Name',
-      type: 'team',
-      children: [
-        {
-          id: 'team-hr',
-          name: 'Human Resources',
-          type: 'folder',
-          children: [
-            { id: 'team-hr-onboarding', name: 'Onboarding', type: 'folder' },
-            { id: 'team-hr-training', name: 'Training', type: 'folder' },
-            { id: 'team-hr-compliance', name: 'Compliance', type: 'folder' }
-          ]
-        },
-        {
-          id: 'team-sales',
-          name: 'Sales Enablement',
-          type: 'folder',
-          children: [
-            { id: 'team-sales-product', name: 'Product Knowledge', type: 'folder' },
-            { id: 'team-sales-skills', name: 'Sales Skills', type: 'folder' },
-            { id: 'team-sales-tools', name: 'Tools & Systems', type: 'folder' }
-          ]
-        },
-        {
-          id: 'team-product',
-          name: 'Product',
-          type: 'folder',
-          children: [
-            { id: 'team-product-features', name: 'Feature Training', type: 'folder' },
-            { id: 'team-product-roadmap', name: 'Roadmap', type: 'folder' }
-          ]
-        },
-        {
-          id: 'team-engineering',
-          name: 'Engineering',
-          type: 'folder',
-          children: [
-            { id: 'team-eng-backend', name: 'Backend Development', type: 'folder' },
-            { id: 'team-eng-frontend', name: 'Frontend Development', type: 'folder' },
-            { id: 'team-eng-devops', name: 'DevOps', type: 'folder' }
-          ]
-        }
-      ]
-    },
-    {
-      id: 'personal',
-      name: 'Personal',
-      type: 'personal',
-      children: [
-        {
-          id: 'personal-drafts',
-          name: 'My Drafts',
-          type: 'folder'
-        },
-        {
-          id: 'personal-completed',
-          name: 'Completed Courses',
-          type: 'folder'
-        },
-        {
-          id: 'personal-shared',
-          name: 'Shared with Me',
-          type: 'folder'
-        }
-      ]
-    }
-  ];
+  const [folderStructure, setFolderStructure] = useState<FolderNode[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set(['team', 'personal'])
   );
 
+  // Load folder structure from API
+  useEffect(() => {
+    const loadFolders = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/folders');
+        if (response.ok) {
+          const result = await response.json();
+          setFolderStructure(result.data);
+        } else {
+          console.error('Failed to load folders');
+        }
+      } catch (error) {
+        console.error('Error loading folders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      loadFolders();
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  if (loading) {
+    return (
+      <>
+        <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-gray-600">Loading folders...</div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const toggleFolder = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -112,7 +80,7 @@ export default function FolderSelectionModal({
   };
 
   const handleSelect = (folder: FolderNode) => {
-    onSelect(folder.name);
+    onSelect(folder.id, folder.name);
     onClose();
   };
 

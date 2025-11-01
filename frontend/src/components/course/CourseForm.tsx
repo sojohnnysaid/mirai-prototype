@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store';
 import { setCourseField } from '@/store/slices/courseSlice';
@@ -79,9 +79,46 @@ const FolderSection = memo(() => {
   const dispatch = useDispatch();
   const destinationFolder = useSelector(selectCourseFolder);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+  const [folderName, setFolderName] = useState<string>('');
 
-  const handleFolderSelect = useCallback((folderName: string) => {
-    dispatch(setCourseField({ field: 'destinationFolder', value: folderName }));
+  // Load folder name from ID
+  useEffect(() => {
+    const loadFolderName = async () => {
+      if (destinationFolder && destinationFolder.includes('-')) {
+        // This looks like a folder ID, fetch the name
+        try {
+          const response = await fetch('/api/folders');
+          if (response.ok) {
+            const result = await response.json();
+            const findFolder = (folders: any[], id: string): string | null => {
+              for (const folder of folders) {
+                if (folder.id === id) return folder.name;
+                if (folder.children) {
+                  const found = findFolder(folder.children, id);
+                  if (found) return found;
+                }
+              }
+              return null;
+            };
+            const name = findFolder(result.data, destinationFolder);
+            if (name) setFolderName(name);
+          }
+        } catch (error) {
+          console.error('Failed to load folder name:', error);
+        }
+      } else {
+        // It's already a name
+        setFolderName(destinationFolder || '');
+      }
+    };
+    loadFolderName();
+  }, [destinationFolder]);
+
+  const handleFolderSelect = useCallback((folderId: string, folderName: string) => {
+    // Store the folder ID for backend
+    dispatch(setCourseField({ field: 'destinationFolder', value: folderId }));
+    // Store the name for display
+    setFolderName(folderName);
   }, [dispatch]);
 
   return (
@@ -96,8 +133,8 @@ const FolderSection = memo(() => {
           className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-left"
         >
           <Folder className="w-4 h-4 text-gray-500" />
-          <span className={destinationFolder ? 'text-gray-900' : 'text-gray-500'}>
-            {destinationFolder || 'Select folder'}
+          <span className={folderName ? 'text-gray-900' : 'text-gray-500'}>
+            {folderName || 'Select folder'}
           </span>
         </button>
       </div>

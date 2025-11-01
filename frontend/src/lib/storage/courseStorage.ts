@@ -164,11 +164,22 @@ export async function createCourse(courseData: Partial<StoredCourse>): Promise<S
 
   // Update library index
   const library = await loadLibrary();
+
+  // Convert folder name to folder ID if needed
+  let folderId = course.settings.destinationFolder;
+  if (folderId && !folderId.includes('/') && !folderId.includes('-')) {
+    // This looks like a folder name, try to convert to ID
+    const resolvedId = await getFolderIdFromPath(folderId);
+    if (resolvedId) {
+      folderId = resolvedId;
+    }
+  }
+
   const libraryEntry: LibraryEntry = {
     id: courseId,
     title: course.settings.title,
     status: course.status,
-    folder: course.settings.destinationFolder,
+    folder: folderId,
     tags: course.settings.categoryTags,
     createdAt: course.metadata.createdAt,
     modifiedAt: course.metadata.modifiedAt
@@ -220,11 +231,21 @@ export async function updateCourse(courseId: string, updates: Partial<StoredCour
   const library = await loadLibrary();
   const courseIndex = library.courses.findIndex(c => c.id === courseId);
   if (courseIndex !== -1) {
+    // Convert folder name to folder ID if needed
+    let folderId = updatedCourse.settings?.destinationFolder || library.courses[courseIndex].folder;
+    if (folderId && !folderId.includes('/') && !folderId.includes('-')) {
+      // This looks like a folder name, try to convert to ID
+      const resolvedId = await getFolderIdFromPath(folderId);
+      if (resolvedId) {
+        folderId = resolvedId;
+      }
+    }
+
     library.courses[courseIndex] = {
       ...library.courses[courseIndex],
       title: updatedCourse.settings?.title || library.courses[courseIndex].title,
       status: updatedCourse.status,
-      folder: updatedCourse.settings?.destinationFolder || library.courses[courseIndex].folder,
+      folder: folderId,
       tags: updatedCourse.settings?.categoryTags || library.courses[courseIndex].tags,
       modifiedAt: updatedCourse.metadata.modifiedAt
     };
@@ -345,4 +366,109 @@ export async function exportCourseToSCORM(courseId: string): Promise<string> {
 export async function getFolders(): Promise<any[]> {
   const library = await loadLibrary();
   return library.folders;
+}
+
+// Build hierarchical folder structure from flat array
+export function buildFolderHierarchy(folders: any[]): any[] {
+  const folderMap = new Map();
+  const roots: any[] = [];
+
+  // First pass: create all folder objects
+  folders.forEach(folder => {
+    folderMap.set(folder.id, {
+      ...folder,
+      children: []
+    });
+  });
+
+  // Second pass: build hierarchy
+  folders.forEach(folder => {
+    const folderObj = folderMap.get(folder.id);
+    if (folder.parent) {
+      const parent = folderMap.get(folder.parent);
+      if (parent) {
+        parent.children.push(folderObj);
+      }
+    } else {
+      roots.push(folderObj);
+    }
+  });
+
+  return roots;
+}
+
+// Get folder path from folder ID
+export async function getFolderPath(folderId: string): Promise<string> {
+  const library = await loadLibrary();
+  const folders = library.folders;
+
+  const folder = folders.find(f => f.id === folderId);
+  if (!folder) return '';
+
+  const path: string[] = [folder.name];
+  let current = folder;
+
+  // Traverse up the hierarchy
+  while (current.parent) {
+    const parent = folders.find(f => f.id === current.parent);
+    if (!parent) break;
+    path.unshift(parent.name);
+    current = parent;
+  }
+
+  return path.join('/');
+}
+
+// Get folder ID from folder path or name
+export async function getFolderIdFromPath(pathOrName: string): Promise<string | null> {
+  const library = await loadLibrary();
+  const folders = library.folders;
+
+  // First try exact ID match
+  const exactMatch = folders.find(f => f.id === pathOrName);
+  if (exactMatch) return exactMatch.id;
+
+  // Then try name match
+  const nameMatch = folders.find(f => f.name === pathOrName);
+  if (nameMatch) return nameMatch.id;
+
+  // Finally try path match
+  const pathParts = pathOrName.split('/');
+  if (pathParts.length > 1) {
+    // Navigate through the path
+    let current = folders.find(f => f.name === pathParts[0] && !f.parent);
+
+    for (let i = 1; i < pathParts.length && current; i++) {
+      const children = folders.filter(f => f.parent === current.id);
+      current = children.find(f => f.name === pathParts[i]);
+    }
+
+    return current ? current.id : null;
+  }
+
+  return null;
+}
+
+// Get all courses in a folder (including subfolders)
+export async function getCoursesByFolder(folderId: string, includeSubfolders = true): Promise<LibraryEntry[]> {
+  const library = await loadLibrary();
+  const folders = library.folders;
+  const courses = library.courses;
+
+  // Get all folder IDs to check
+  const folderIds = new Set([folderId]);
+
+  if (includeSubfolders) {
+    // Recursively add all subfolder IDs
+    const addSubfolders = (parentId: string) => {
+      folders.filter(f => f.parent === parentId).forEach(subfolder => {
+        folderIds.add(subfolder.id);
+        addSubfolders(subfolder.id);
+      });
+    };
+    addSubfolders(folderId);
+  }
+
+  // Filter courses by folder IDs
+  return courses.filter(course => folderIds.has(course.folder));
 }
