@@ -2,6 +2,9 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '@/store';
+import { resetCourse } from '@/store/slices/courseSlice';
 import { X, Sparkles, Upload } from 'lucide-react';
 
 interface CourseCreationModalProps {
@@ -11,10 +14,14 @@ interface CourseCreationModalProps {
 
 export default function CourseCreationModal({ isOpen, onClose }: CourseCreationModalProps) {
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
 
   if (!isOpen) return null;
 
   const handlePromptBasedClick = () => {
+    // Clear the existing course from Redux state
+    dispatch(resetCourse());
+    // Navigate to course builder for new course
     router.push('/course-builder');
     onClose();
   };

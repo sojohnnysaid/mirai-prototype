@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '@/store';
+import { RootState, AppDispatch } from '@/store';
 import {
   Plus,
   Type,
@@ -10,10 +10,15 @@ import {
   MousePointer,
   CheckCircle,
   ChevronDown,
-  Eye
+  Eye,
+  ArrowLeft,
+  Settings,
+  Save,
+  Home
 } from 'lucide-react';
 import CourseBlock from './CourseBlock';
 import BlockAlignmentPanel from './BlockAlignmentPanel';
+import DropdownMenu from '@/components/ui/DropdownMenu';
 import { docOMaticCourseBlocks, docOMaticCourseSections } from '@/lib/docOMaticMockData';
 import {
   addCourseBlock,
@@ -21,12 +26,15 @@ import {
   removeCourseBlock,
   setActiveBlockId,
   reorderCourseBlocks,
-  setCurrentStep
+  setCurrentStep,
+  saveCourse
 } from '@/store/slices/courseSlice';
 import { CourseBlock as CourseBlockType, BlockType } from '@/types';
+import { useRouter } from 'next/navigation';
 
 export default function CourseEditor() {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
   const course = useSelector((state: RootState) => state.course.currentCourse);
   const courseBlocks = useSelector((state: RootState) => state.course.courseBlocks);
   const activeBlockId = useSelector((state: RootState) => state.course.activeBlockId);
@@ -36,14 +44,24 @@ export default function CourseEditor() {
   const [showAddBlockMenu, setShowAddBlockMenu] = useState(false);
   const [collapsedSummary, setCollapsedSummary] = useState(false);
 
-  // Initialize with mock data
+  // Initialize course blocks from saved course data
   useEffect(() => {
+    // Only add mock data if there are no blocks AND no saved content
     if (courseBlocks.length === 0) {
-      docOMaticCourseBlocks.forEach(block => {
-        dispatch(addCourseBlock(block));
-      });
+      // Check if course has saved content blocks
+      if (course.content?.courseBlocks && course.content.courseBlocks.length > 0) {
+        // Load the saved course blocks
+        course.content.courseBlocks.forEach((block: CourseBlockType) => {
+          dispatch(addCourseBlock(block));
+        });
+      } else {
+        // Fallback to mock data only if no saved content exists
+        docOMaticCourseBlocks.forEach(block => {
+          dispatch(addCourseBlock(block));
+        });
+      }
     }
-  }, []);
+  }, [course.content]);
 
   const handleBlockUpdate = (block: CourseBlockType) => {
     dispatch(updateCourseBlock({ id: block.id, block }));
@@ -139,27 +157,91 @@ export default function CourseEditor() {
         {/* Course Summary Bar */}
         <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
           <div className="p-4">
-            <button
-              onClick={() => setCollapsedSummary(!collapsedSummary)}
-              className="flex items-center justify-between w-full"
-            >
-              <div className="text-left">
-                <h2 className="text-lg font-semibold text-gray-900">{course.title}</h2>
-                {!collapsedSummary && (
-                  <div className="mt-2 space-y-1 text-sm text-gray-600">
-                    <p><strong>Outcome:</strong> {course.desiredOutcome}</p>
-                    <p><strong>Objectives:</strong> {course.learningObjectives?.length || 0} defined</p>
-                    <p><strong>Personas:</strong> {course.personas?.map(p => p.role).join(', ')}</p>
+            <div className="flex items-start justify-between">
+              <button
+                onClick={() => setCollapsedSummary(!collapsedSummary)}
+                className="flex items-center justify-between flex-grow"
+              >
+                <div className="text-left">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-semibold text-gray-900">{course.title || 'Untitled Course'}</h2>
+                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      Step 4 of 5: Edit Content
+                    </span>
                   </div>
-                )}
+                  {!collapsedSummary && (
+                    <div className="mt-2 space-y-1 text-sm text-gray-600">
+                      <p><strong>Outcome:</strong> {course.desiredOutcome}</p>
+                      <p><strong>Objectives:</strong> {course.learningObjectives?.length || 0} defined</p>
+                      <p><strong>Personas:</strong> {course.personas?.map(p => p.role).join(', ')}</p>
+                    </div>
+                  )}
+                </div>
+                <ChevronDown
+                  size={20}
+                  className={`text-gray-400 transition-transform ml-4 ${
+                    collapsedSummary ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Navigation Menu */}
+              <div className="ml-4 flex items-center gap-2">
+                <DropdownMenu
+                  triggerIcon="dots"
+                  align="right"
+                  items={[
+                    {
+                      label: 'Back to Review',
+                      icon: <ArrowLeft className="w-4 h-4" />,
+                      onClick: () => dispatch(setCurrentStep(3)),
+                    },
+                    {
+                      label: '',
+                      divider: true,
+                    },
+                    {
+                      label: 'Edit Course Settings',
+                      icon: <Settings className="w-4 h-4" />,
+                      onClick: () => dispatch(setCurrentStep(1)),
+                    },
+                    {
+                      label: 'Edit Learning Objectives',
+                      icon: <FileText className="w-4 h-4" />,
+                      onClick: () => dispatch(setCurrentStep(2)),
+                    },
+                    {
+                      label: '',
+                      divider: true,
+                    },
+                    {
+                      label: 'Save & Exit',
+                      icon: <Save className="w-4 h-4" />,
+                      onClick: async () => {
+                        if (course.id) {
+                          await dispatch(saveCourse({
+                            id: course.id,
+                            courseData: {
+                              ...course,
+                              content: {
+                                sections: course.sections || [],
+                                courseBlocks: courseBlocks || [],
+                              },
+                            },
+                          }));
+                        }
+                        router.push('/dashboard');
+                      },
+                    },
+                    {
+                      label: 'Exit Without Saving',
+                      icon: <Home className="w-4 h-4" />,
+                      onClick: () => router.push('/dashboard'),
+                    },
+                  ]}
+                />
               </div>
-              <ChevronDown
-                size={20}
-                className={`text-gray-400 transition-transform ${
-                  collapsedSummary ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
+            </div>
           </div>
         </div>
 

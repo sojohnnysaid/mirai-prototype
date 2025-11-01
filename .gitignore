@@ -95,6 +95,10 @@ logs/
 # Redis dump
 dump.rdb
 
+# Data storage directory (for prototype course data)
+data/
+frontend/data/
+
 # But keep the public folder structure
 !frontend/public/
 !frontend/public/.gitkeep

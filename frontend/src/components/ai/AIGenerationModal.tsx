@@ -21,7 +21,7 @@ export default function AIGenerationModal({ isOpen, onClose }: AIGenerationModal
     if (progress === 100 && !isGenerating) {
       const timer = setTimeout(() => {
         handleClose();
-      }, 1500);
+      }, 500); // Reduced from 1500ms to 500ms for quicker transition
       return () => clearTimeout(timer);
     }
   }, [progress, isGenerating]);
