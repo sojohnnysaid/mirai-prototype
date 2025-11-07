@@ -24,14 +24,15 @@ export default function LearningObjectivesForm() {
   );
   const { isGenerating } = useSelector((state: RootState) => state.aiGeneration);
 
-  const [objectives, setObjectives] = useState<string[]>([
-    '', '', '' // Start with 3 empty objectives
-  ]);
+  const [objectives, setObjectives] = useState<string[]>(['']); // Start with one empty field
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
 
   useEffect(() => {
     if (learningObjectives.length > 0) {
       setObjectives(learningObjectives.map(obj => obj.text));
+    } else {
+      // Start with one empty objective field if there are no objectives
+      setObjectives(['']);
     }
   }, [learningObjectives]);
 
@@ -39,14 +40,15 @@ export default function LearningObjectivesForm() {
     const newObjectives = [...objectives];
     newObjectives[index] = value;
     setObjectives(newObjectives);
-    saveObjectives(newObjectives);
+    // Only save to Redux, don't modify the local state
+    saveObjectivesToRedux(newObjectives);
   };
 
   const addObjective = () => {
     if (objectives.length < 8) {
       const newObjectives = [...objectives, ''];
       setObjectives(newObjectives);
-      saveObjectives(newObjectives);
+      saveObjectivesToRedux(newObjectives);
     }
   };
 
@@ -54,17 +56,18 @@ export default function LearningObjectivesForm() {
     if (objectives.length > 1) {
       const newObjectives = objectives.filter((_, i) => i !== index);
       setObjectives(newObjectives);
-      saveObjectives(newObjectives);
+      saveObjectivesToRedux(newObjectives);
     }
   };
 
-  const saveObjectives = (objectivesList: string[]) => {
+  const saveObjectivesToRedux = (objectivesList: string[]) => {
+    // Only save non-empty objectives to Redux
     const learningObjectives: LearningObjective[] = objectivesList
-      .filter(text => text.trim())
       .map((text, index) => ({
         id: `obj-${index + 1}`,
-        text: text.trim(),
-      }));
+        text: text,
+      }))
+      .filter(obj => obj.text.trim().length > 0);  // Filter after mapping to preserve IDs
     dispatch(setLearningObjectives(learningObjectives));
   };
 
@@ -88,7 +91,7 @@ export default function LearningObjectivesForm() {
 
     // Set the generated objectives
     setObjectives(aiGeneratedContent.learningObjectives);
-    saveObjectives(aiGeneratedContent.learningObjectives);
+    saveObjectivesToRedux(aiGeneratedContent.learningObjectives);
 
     dispatch(completeGeneration());
     setIsAutoGenerating(false);
@@ -102,7 +105,7 @@ export default function LearningObjectivesForm() {
     [newObjectives[fromIndex], newObjectives[toIndex]] =
     [newObjectives[toIndex], newObjectives[fromIndex]];
     setObjectives(newObjectives);
-    saveObjectives(newObjectives);
+    saveObjectivesToRedux(newObjectives);
   };
 
   return (
