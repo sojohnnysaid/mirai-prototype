@@ -7,6 +7,7 @@ export interface Persona {
   challenges?: string;
   concerns?: string;
   knowledge?: string;
+  learningObjectives?: LearningObjective[];
 }
 
 export interface LearningObjective {

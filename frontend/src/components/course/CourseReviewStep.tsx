@@ -71,12 +71,15 @@ export default function CourseReviewStep() {
   };
 
   const isReadyToGenerate = () => {
-    return (
-      course.title &&
-      course.desiredOutcome &&
-      (course.personas?.length ?? 0) > 0 &&
-      (course.learningObjectives?.length ?? 0) > 0
-    );
+    const hasBasicInfo = course.title && course.desiredOutcome;
+    const hasPersonas = (course.personas?.length ?? 0) > 0;
+
+    // Check if at least one persona has learning objectives
+    const hasLearningObjectives = course.personas?.some(
+      persona => persona.learningObjectives && persona.learningObjectives.length > 0
+    ) ?? false;
+
+    return hasBasicInfo && hasPersonas && hasLearningObjectives;
   };
 
   return (
@@ -145,10 +148,10 @@ export default function CourseReviewStep() {
         </div>
       </div>
 
-      {/* Learning Objectives Section */}
+      {/* Target Personas with Learning Objectives Section */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Learning Objectives</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Target Personas & Learning Objectives</h3>
           <button
             onClick={() => handleEdit(2)}
             className="text-purple-600 hover:text-purple-700 text-sm flex items-center gap-1"
@@ -158,52 +161,58 @@ export default function CourseReviewStep() {
           </button>
         </div>
 
-        {(course.learningObjectives?.length ?? 0) > 0 ? (
-          <ol className="space-y-2">
-            {course.learningObjectives?.map((objective, index) => (
-              <li key={objective.id} className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-semibold">
-                  {index + 1}
-                </span>
-                <span className="text-gray-700">{objective.text}</span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="text-gray-500">No learning objectives defined</p>
-        )}
-      </div>
-
-      {/* Target Personas Section */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Target Personas</h3>
-          <button
-            onClick={() => handleEdit(1)}
-            className="text-purple-600 hover:text-purple-700 text-sm flex items-center gap-1"
-          >
-            <Edit2 size={16} />
-            Edit
-          </button>
-        </div>
-
         {(course.personas?.length ?? 0) > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {course.personas?.map((persona) => (
-              <div key={persona.id} className="bg-gray-50 rounded-lg p-4">
-                <div className="font-semibold text-gray-900 mb-2">{persona.role}</div>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-600">KPIs:</span>
-                    <p className="text-gray-700 mt-1">{persona.kpis}</p>
+          <div className="space-y-6">
+            {course.personas?.map((persona, personaIndex) => (
+              <div key={persona.id} className="border-l-4 border-purple-500 pl-4">
+                <div className="font-semibold text-lg text-gray-900 mb-2">{persona.role}</div>
+
+                {/* Persona Details */}
+                <div className="bg-gray-50 rounded-lg p-4 mb-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    {persona.kpis && (
+                      <div>
+                        <span className="font-medium text-gray-600">KPIs:</span>
+                        <p className="text-gray-700 mt-1">{persona.kpis}</p>
+                      </div>
+                    )}
+                    {persona.responsibilities && (
+                      <div>
+                        <span className="font-medium text-gray-600">Responsibilities:</span>
+                        <p className="text-gray-700 mt-1">{persona.responsibilities}</p>
+                      </div>
+                    )}
+                    {persona.challenges && (
+                      <div>
+                        <span className="font-medium text-gray-600">Challenges:</span>
+                        <p className="text-gray-700 mt-1">{persona.challenges}</p>
+                      </div>
+                    )}
+                    {persona.knowledge && (
+                      <div>
+                        <span className="font-medium text-gray-600">Baseline Knowledge:</span>
+                        <p className="text-gray-700 mt-1">{persona.knowledge}</p>
+                      </div>
+                    )}
                   </div>
-                  {persona.responsibilities && (
-                    <div>
-                      <span className="font-medium text-gray-600">Responsibilities:</span>
-                      <p className="text-gray-700 mt-1">{persona.responsibilities}</p>
-                    </div>
-                  )}
                 </div>
+
+                {/* Learning Objectives for this Persona */}
+                {persona.learningObjectives && persona.learningObjectives.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Learning Objectives:</h4>
+                    <ol className="space-y-1">
+                      {persona.learningObjectives.map((objective, index) => (
+                        <li key={objective.id} className="flex items-start gap-2">
+                          <span className="flex-shrink-0 w-5 h-5 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-semibold">
+                            {index + 1}
+                          </span>
+                          <span className="text-sm text-gray-700">{objective.text}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
               </div>
             ))}
           </div>
