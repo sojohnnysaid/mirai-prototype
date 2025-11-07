@@ -16,7 +16,6 @@ import Button from '@/components/ui/Button';
 import CourseForm from '@/components/course/CourseForm';
 import PersonaCard from '@/components/course/PersonaCard';
 import ProgressIndicator from '@/components/ui/ProgressIndicator';
-import LearningObjectivesForm from '@/components/course/LearningObjectivesForm';
 import PersonaDetailForm from '@/components/course/PersonaDetailForm';
 import CourseReviewStep from '@/components/course/CourseReviewStep';
 import CourseEditor from '@/components/course/CourseEditor';
@@ -191,21 +190,16 @@ export default function CourseBuilder() {
             {/* Step Banner */}
             <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 text-center mb-8">
               <p className="text-gray-900 font-medium text-lg">
-                Let's define your target audience and what they'll achieve
+                Define your target audience and their learning goals
               </p>
               <p className="text-gray-600 text-sm mt-1">
-                Configure each persona's details and set clear learning objectives
+                Configure each persona's details and set personalized learning objectives
               </p>
             </div>
 
-            {/* Persona Deep Dive - Moved to top for better visibility */}
+            {/* Persona Deep Dive with integrated Learning Objectives */}
             <div className="mb-8">
               <PersonaDetailForm />
-            </div>
-
-            {/* Learning Objectives */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-8 mb-8">
-              <LearningObjectivesForm />
             </div>
 
             <div className="flex justify-between">

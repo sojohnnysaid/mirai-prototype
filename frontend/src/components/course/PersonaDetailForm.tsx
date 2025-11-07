@@ -11,8 +11,9 @@ import {
   completeGeneration
 } from '@/store/slices/aiGenerationSlice';
 import AIGenerateButton from '@/components/ai/AIGenerateButton';
-import { aiGeneratedContent, mockGenerationDelays, docOMaticPersonas } from '@/lib/docOMaticMockData';
-import { Persona } from '@/types';
+import PersonaLearningObjectives from './PersonaLearningObjectives';
+import { aiGeneratedContent, mockGenerationDelays, docOMaticPersonas, docOMaticLearningObjectives } from '@/lib/docOMaticMockData';
+import { Persona, LearningObjective } from '@/types';
 
 export default function PersonaDetailForm() {
   const dispatch = useDispatch();
@@ -41,14 +42,15 @@ export default function PersonaDetailForm() {
 
     // Simulate AI generation with progress updates
     const steps = [
-      { progress: 25, message: `Analyzing ${currentPersona.role || 'persona'} role requirements...` },
-      { progress: 50, message: 'Identifying key challenges and pain points...' },
-      { progress: 75, message: 'Mapping required knowledge and skills...' },
+      { progress: 20, message: `Analyzing ${currentPersona.role || 'persona'} role requirements...` },
+      { progress: 40, message: 'Identifying key challenges and pain points...' },
+      { progress: 60, message: 'Generating personalized learning objectives...' },
+      { progress: 80, message: 'Mapping required knowledge and skills...' },
       { progress: 100, message: 'Finalizing persona details...' },
     ];
 
     for (const step of steps) {
-      await new Promise(resolve => setTimeout(resolve, mockGenerationDelays.personas / 4));
+      await new Promise(resolve => setTimeout(resolve, mockGenerationDelays.personas / 5));
       dispatch(updateProgress(step));
     }
 
@@ -58,7 +60,10 @@ export default function PersonaDetailForm() {
       p.name.toLowerCase() === currentPersona.role?.toLowerCase()
     ) || docOMaticPersonas[0];
 
-    // Update persona with realistic fake data
+    // Generate persona-specific learning objectives
+    const personaObjectives = generatePersonaObjectives(currentPersona.role);
+
+    // Update persona with realistic fake data including learning objectives
     dispatch(updatePersona({
       id: currentPersona.id,
       persona: {
@@ -66,7 +71,75 @@ export default function PersonaDetailForm() {
         challenges: matchingMockPersona.challenges,
         concerns: matchingMockPersona.concerns,
         knowledge: matchingMockPersona.knowledge,
+        learningObjectives: personaObjectives,
       }
+    }));
+
+    dispatch(completeGeneration());
+    setIsAutoGenerating(false);
+  };
+
+  const generatePersonaObjectives = (role: string): LearningObjective[] => {
+    // Generate role-specific objectives based on the persona
+    const roleLC = role.toLowerCase();
+
+    if (roleLC.includes('sales') || roleLC.includes('account')) {
+      return [
+        { id: `obj-${role}-1`, text: 'Articulate the unique value proposition effectively to prospects in their industry' },
+        { id: `obj-${role}-2`, text: 'Conduct discovery calls that uncover critical business pain points' },
+        { id: `obj-${role}-3`, text: 'Handle pricing objections with confidence using ROI calculations' },
+      ];
+    } else if (roleLC.includes('manager')) {
+      return [
+        { id: `obj-${role}-1`, text: 'Coach team members on advanced selling techniques and best practices' },
+        { id: `obj-${role}-2`, text: 'Analyze pipeline metrics to identify areas for improvement' },
+        { id: `obj-${role}-3`, text: 'Develop strategic account plans for high-value opportunities' },
+      ];
+    } else if (roleLC.includes('engineer') || roleLC.includes('technical')) {
+      return [
+        { id: `obj-${role}-1`, text: 'Demonstrate technical integrations tailored to customer environments' },
+        { id: `obj-${role}-2`, text: 'Translate complex technical concepts into business benefits' },
+        { id: `obj-${role}-3`, text: 'Design and execute successful proof-of-concept implementations' },
+      ];
+    } else {
+      // Default objectives
+      return docOMaticLearningObjectives.slice(0, 3).map((obj, index) => ({
+        ...obj,
+        id: `obj-${role}-${index + 1}`,
+      }));
+    }
+  };
+
+  const handleLearningObjectivesChange = (objectives: LearningObjective[]) => {
+    if (currentPersona) {
+      dispatch(updatePersona({
+        id: currentPersona.id,
+        persona: { learningObjectives: objectives }
+      }));
+    }
+  };
+
+  const handleAutoGenerateObjectives = async () => {
+    if (!currentPersona) return;
+
+    setIsAutoGenerating(true);
+    dispatch(startGeneration({ type: 'objectives' }));
+
+    const steps = [
+      { progress: 33, message: `Analyzing ${currentPersona.role} learning needs...` },
+      { progress: 66, message: 'Generating targeted objectives...' },
+      { progress: 100, message: 'Finalizing learning outcomes...' },
+    ];
+
+    for (const step of steps) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      dispatch(updateProgress(step));
+    }
+
+    const objectives = generatePersonaObjectives(currentPersona.role);
+    dispatch(updatePersona({
+      id: currentPersona.id,
+      persona: { learningObjectives: objectives }
     }));
 
     dispatch(completeGeneration());
@@ -246,6 +319,19 @@ export default function PersonaDetailForm() {
               placeholder="Describe the baseline knowledge and skills they should possess..."
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-all"
               rows={3}
+            />
+          </div>
+        </div>
+
+        {/* Learning Objectives for this Persona */}
+        <div className="md:col-span-2">
+          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200 p-5">
+            <PersonaLearningObjectives
+              objectives={currentPersona.learningObjectives || []}
+              personaRole={currentPersona.role || `Persona ${currentPersonaIndex + 1}`}
+              onChange={handleLearningObjectivesChange}
+              onAutoGenerate={handleAutoGenerateObjectives}
+              isGenerating={isAutoGenerating}
             />
           </div>
         </div>
