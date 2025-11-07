@@ -189,20 +189,23 @@ export default function CourseBuilder() {
         return (
           <>
             {/* Step Banner */}
-            <div className="bg-primary-50 rounded-2xl p-6 text-center mb-8">
-              <p className="text-gray-900 font-medium">
-                Now, we're going to further define the audience and key personas related to the course
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 text-center mb-8">
+              <p className="text-gray-900 font-medium text-lg">
+                Let's define your target audience and what they'll achieve
               </p>
+              <p className="text-gray-600 text-sm mt-1">
+                Configure each persona's details and set clear learning objectives
+              </p>
+            </div>
+
+            {/* Persona Deep Dive - Moved to top for better visibility */}
+            <div className="mb-8">
+              <PersonaDetailForm />
             </div>
 
             {/* Learning Objectives */}
             <div className="bg-white border border-gray-200 rounded-2xl p-8 mb-8">
               <LearningObjectivesForm />
-            </div>
-
-            {/* Persona Deep Dive */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-8 mb-8">
-              <PersonaDetailForm />
             </div>
 
             <div className="flex justify-between">
@@ -248,12 +251,12 @@ export default function CourseBuilder() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             {currentStep === 1 ? 'Define your learning goal' :
-             currentStep === 2 ? 'Learning Objectives & Personas' :
+             currentStep === 2 ? 'Personas & Learning Objectives' :
              currentStep === 3 ? 'Review & Validate' : 'Course Builder'}
           </h1>
           <p className="text-gray-600">
             {currentStep === 1 ? 'Your learning goals and the personas/roles who will take the courses generated' :
-             currentStep === 2 ? 'Define what learners will achieve and understand your audience deeply' :
+             currentStep === 2 ? 'Configure each persona deeply and define what learners will achieve' :
              currentStep === 3 ? 'Review all inputs before generating your AI-powered course' : ''}
           </p>
         </div>
