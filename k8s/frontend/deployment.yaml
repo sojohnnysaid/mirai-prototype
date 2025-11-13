@@ -22,8 +22,27 @@ spec:
         - containerPort: 3000
           name: http
         env:
-        - name: NEXT_PUBLIC_API_URL
-          value: "http://mirai-backend:3001"
+        # MinIO configuration
+        - name: USE_S3_STORAGE
+          value: "true"
+        - name: S3_ENDPOINT
+          value: "http://192.168.1.226:9768"
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: accesskey
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: secretkey
+        - name: S3_BUCKET
+          value: "mirai"
+        - name: S3_REGION
+          value: "us-east-1"
+        - name: S3_BASE_PATH
+          value: "data"
         resources:
           requests:
             memory: "256Mi"
