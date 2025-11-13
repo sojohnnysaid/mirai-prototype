@@ -48,6 +48,11 @@ spec:
           value: "/nfs-data"
         - name: ENABLE_NFS_BACKUP
           value: "true"
+        # Redis cache configuration
+        - name: REDIS_URL
+          value: "redis://redis.redis.svc.cluster.local:6379"
+        - name: ENABLE_REDIS_CACHE
+          value: "true"
         volumeMounts:
         # Mount the NFS PVC for persistent file storage
         - name: nfs-data

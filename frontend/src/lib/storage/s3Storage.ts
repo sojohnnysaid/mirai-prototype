@@ -1,4 +1,13 @@
-import { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectCommand,
+  HeadObjectCommand
+} from '@aws-sdk/client-s3';
+import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
+import { Agent } from 'https';
 import { Readable } from 'stream';
 
 // S3/MinIO storage adapter for production
@@ -23,6 +32,13 @@ export class S3Storage {
       );
     }
 
+    // Create HTTP agent with connection pooling
+    const httpAgent = new Agent({
+      keepAlive: true,
+      maxSockets: 50,        // Maximum concurrent connections
+      keepAliveMsecs: 10000, // Keep alive for 10 seconds
+    });
+
     this.s3Client = new S3Client({
       endpoint,
       region,
@@ -31,6 +47,13 @@ export class S3Storage {
         secretAccessKey: process.env.S3_SECRET_KEY,
       },
       forcePathStyle: true, // Required for MinIO
+      requestHandler: new NodeHttpHandler({
+        httpAgent: httpAgent as any,
+        httpsAgent: httpAgent,
+        connectionTimeout: 5000,
+        socketTimeout: 5000,
+      }),
+      maxAttempts: 3, // Retry failed requests up to 3 times
     });
   }
 
@@ -82,6 +105,40 @@ export class S3Storage {
         .filter(key => key.endsWith('.json'));
     } catch (error) {
       console.error(`Error listing S3 files: ${prefix}`, error);
+      throw error;
+    }
+  }
+
+  // Delete a file from S3/MinIO
+  async deleteObject(key: string): Promise<void> {
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: `${this.basePath}/${key}`,
+      });
+
+      await this.s3Client.send(command);
+    } catch (error) {
+      console.error(`Error deleting from S3: ${key}`, error);
+      throw error;
+    }
+  }
+
+  // Check if object exists in S3/MinIO
+  async objectExists(key: string): Promise<boolean> {
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: `${this.basePath}/${key}`,
+      });
+
+      await this.s3Client.send(command);
+      return true;
+    } catch (error: any) {
+      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+        return false;
+      }
+      console.error(`Error checking S3 object existence: ${key}`, error);
       throw error;
     }
   }
