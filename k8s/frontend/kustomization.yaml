@@ -9,7 +9,7 @@ resources:
 images:
 - name: ghcr.io/sojohnnysaid/mirai-prototype/mirai-frontend
   newName: ghcr.io/sojohnnysaid/mirai-prototype/mirai-frontend
-  newTag: 5626ee8
+  newTag: 93ce75b
 
 namespace: default
 
