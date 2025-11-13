@@ -114,3 +114,4 @@ k8s/minio-secret.yaml
 k8s/*-secret.yaml
 .env.local
 .env.production.local
+istio-1.24.0/

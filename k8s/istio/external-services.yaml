@@ -1,0 +1,37 @@
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: cloudflare-dns
+  namespace: istio-system
+spec:
+  hosts:
+  - cloudflare-dns.global
+  addresses:
+  - "1.1.1.1"
+  - "8.8.8.8"
+  ports:
+  - number: 53
+    name: dns-udp
+    protocol: UDP
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: STATIC
+---
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: minio-s3-external
+  namespace: default
+spec:
+  hosts:
+  - minio.external
+  addresses:
+  - "192.168.1.226"
+  ports:
+  - number: 9768
+    name: http
+    protocol: HTTP
+  location: MESH_EXTERNAL
+  resolution: STATIC

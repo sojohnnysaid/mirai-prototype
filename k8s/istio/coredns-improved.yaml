@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        log . {
+            class error
+        }
+        prometheus :9153
+
+        # Kubernetes cluster DNS - with improved settings
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+            ttl 30
+        }
+
+        # Forward to upstream DNS with better settings
+        forward . 1.1.1.1 8.8.8.8 {
+            max_concurrent 1000
+            prefer_udp
+        }
+
+        # Improved cache settings
+        cache 30 {
+            success 9984 30
+            denial 9984 5
+        }
+
+        loop
+        reload
+        loadbalance
+    }
