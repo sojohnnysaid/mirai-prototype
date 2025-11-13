@@ -118,5 +118,22 @@ export function getStorageAdapter(): IStorageAdapter {
   return baseAdapter;
 }
 
-// Export singleton instance
-export const storageAdapter = getStorageAdapter();
+// Lazy initialization - create adapter on first use
+let _storageAdapter: IStorageAdapter | null = null;
+
+export function getStorageAdapterInstance(): IStorageAdapter {
+  if (!_storageAdapter) {
+    _storageAdapter = getStorageAdapter();
+  }
+  return _storageAdapter;
+}
+
+// Export for backward compatibility (will use lazy initialization)
+export const storageAdapter = {
+  readJSON: (filePath: string) => getStorageAdapterInstance().readJSON(filePath),
+  writeJSON: (filePath: string, data: any) => getStorageAdapterInstance().writeJSON(filePath, data),
+  listFiles: (directory: string) => getStorageAdapterInstance().listFiles(directory),
+  ensureDirectory: (directory: string) => getStorageAdapterInstance().ensureDirectory(directory),
+  deleteFile: (filePath: string) => getStorageAdapterInstance().deleteFile?.(filePath) ?? Promise.resolve(),
+  exists: (filePath: string) => getStorageAdapterInstance().exists?.(filePath) ?? Promise.resolve(true)
+};
