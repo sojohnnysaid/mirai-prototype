@@ -14,12 +14,21 @@ export class S3Storage {
     this.bucket = process.env.S3_BUCKET || 'mirai';
     this.basePath = process.env.S3_BASE_PATH || 'data';
 
+    // SECURITY: Never hardcode credentials in source code!
+    // These MUST be provided via environment variables
+    if (!process.env.S3_ACCESS_KEY || !process.env.S3_SECRET_KEY) {
+      throw new Error(
+        'S3_ACCESS_KEY and S3_SECRET_KEY environment variables are required. ' +
+        'Never hardcode credentials in source code!'
+      );
+    }
+
     this.s3Client = new S3Client({
       endpoint,
       region,
       credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY || 'root',
-        secretAccessKey: process.env.S3_SECRET_KEY || '!J0hnny12345$',
+        accessKeyId: process.env.S3_ACCESS_KEY,
+        secretAccessKey: process.env.S3_SECRET_KEY,
       },
       forcePathStyle: true, // Required for MinIO
     });

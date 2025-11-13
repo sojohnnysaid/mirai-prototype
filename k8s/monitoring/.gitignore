@@ -1,0 +1,9 @@
+# Ignore actual secret files
+*-secret-actual.yaml
+*-secret-prod.yaml
+secrets/
+.secrets/
+
+# Ignore any file with actual passwords
+*.actual.yaml
+*.prod.yaml
