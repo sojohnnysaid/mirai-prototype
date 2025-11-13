@@ -127,8 +127,8 @@ spec:
         configMap:
           name: loki-config
       - name: storage
-        emptyDir:
-          sizeLimit: 5Gi  # Limit to 5GB to prevent bloat
+        persistentVolumeClaim:
+          claimName: loki-storage
 ---
 apiVersion: v1
 kind: Service

@@ -187,7 +187,8 @@ spec:
         configMap:
           name: grafana-dashboards
       - name: storage
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: grafana-storage
 ---
 apiVersion: v1
 kind: Service
@@ -212,12 +213,11 @@ data:
     global:
       scrape_interval: 15s
       evaluation_interval: 15s
-      # Reduce sample retention to prevent bloat
       external_labels:
         cluster: 'macmini-cluster'
 
-    # Scrape configs for DNS metrics
     scrape_configs:
+    # DNS metrics
     - job_name: 'coredns'
       kubernetes_sd_configs:
       - role: pod
@@ -249,6 +249,149 @@ data:
         regex: ([^:]+)(?::\d+)?
         replacement: $1:9253
         target_label: __address__
+
+    # Kubernetes API Server metrics
+    - job_name: 'kubernetes-apiservers'
+      kubernetes_sd_configs:
+      - role: endpoints
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: default;kubernetes;https
+
+    # Kubelet metrics (container/pod metrics via cAdvisor)
+    - job_name: 'kubernetes-nodes'
+      kubernetes_sd_configs:
+      - role: node
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+
+    # Kubelet cAdvisor metrics (detailed container metrics)
+    - job_name: 'kubernetes-cadvisor'
+      kubernetes_sd_configs:
+      - role: node
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __metrics_path__
+        replacement: /metrics/cadvisor
+
+    # Node Exporter (hardware and OS metrics)
+    - job_name: 'node-exporter'
+      kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+          - monitoring
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: node-exporter
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: node
+      - source_labels: [__address__]
+        action: replace
+        regex: ([^:]+)(?::\d+)?
+        replacement: $1:9100
+        target_label: __address__
+
+    # Pod metrics across all namespaces
+    - job_name: 'kubernetes-pods'
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+
+    # etcd metrics (Talos exposes on control plane nodes)
+    - job_name: 'etcd'
+      kubernetes_sd_configs:
+      - role: node
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_node_label_node_role_kubernetes_io_control_plane]
+        action: keep
+        regex: "true"
+      - source_labels: [__address__]
+        action: replace
+        regex: ([^:]+)(?::\d+)?
+        replacement: $1:2381
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+
+    # kube-controller-manager metrics
+    - job_name: 'kube-controller-manager'
+      kubernetes_sd_configs:
+      - role: node
+      scheme: https
+      tls_config:
+        insecure_skip_verify: true
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_node_label_node_role_kubernetes_io_control_plane]
+        action: keep
+        regex: "true"
+      - source_labels: [__address__]
+        action: replace
+        regex: ([^:]+)(?::\d+)?
+        replacement: $1:10257
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+
+    # kube-scheduler metrics
+    - job_name: 'kube-scheduler'
+      kubernetes_sd_configs:
+      - role: node
+      scheme: https
+      tls_config:
+        insecure_skip_verify: true
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_node_label_node_role_kubernetes_io_control_plane]
+        action: keep
+        regex: "true"
+      - source_labels: [__address__]
+        action: replace
+        regex: ([^:]+)(?::\d+)?
+        replacement: $1:10259
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -315,7 +458,8 @@ spec:
         configMap:
           name: prometheus-config
       - name: storage
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: prometheus-storage
 ---
 apiVersion: v1
 kind: Service

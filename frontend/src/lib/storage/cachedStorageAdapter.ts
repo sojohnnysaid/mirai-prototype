@@ -138,8 +138,10 @@ export class CachedStorageAdapter implements IStorageAdapter {
   async deleteFile(filePath: string): Promise<void> {
     await this.ensureInitialized();
 
-    // Delete from storage
-    await this.baseAdapter.deleteFile(filePath);
+    // Delete from storage if method exists
+    if (this.baseAdapter.deleteFile) {
+      await this.baseAdapter.deleteFile(filePath);
+    }
 
     // Invalidate cache
     const cacheKey = this.getCacheKey(filePath);
@@ -160,13 +162,18 @@ export class CachedStorageAdapter implements IStorageAdapter {
       return cached.data;
     }
 
-    // Check storage
-    const exists = await this.baseAdapter.exists(filePath);
+    // Check storage if method exists
+    if (this.baseAdapter.exists) {
+      const exists = await this.baseAdapter.exists(filePath);
 
-    // Cache the result for 60 seconds
-    await this.cache.set(cacheKey, exists, undefined, 60);
+      // Cache the result for 60 seconds
+      await this.cache.set(cacheKey, exists, undefined, 60);
 
-    return exists;
+      return exists;
+    }
+
+    // Fallback: assume file exists if we can't check
+    return true;
   }
 
   /**
