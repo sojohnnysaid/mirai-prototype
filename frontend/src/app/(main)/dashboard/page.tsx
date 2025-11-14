@@ -19,7 +19,6 @@ export default function Dashboard() {
   useEffect(() => {
     // If courses are already loaded from prefetch, skip
     if (coursesLoaded && courses.length > 0) {
-      console.log('Using prefetched courses from Redux - no fetch needed');
       return;
     }
 

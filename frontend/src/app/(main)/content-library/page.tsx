@@ -45,7 +45,6 @@ export default function ContentLibrary() {
   useEffect(() => {
     // If both are already loaded from prefetch, skip entirely
     if (foldersLoaded && coursesLoaded && reduxFolders.length > 0 && reduxCourses.length > 0) {
-      console.log('Using prefetched data - no fetch needed');
       return;
     }
 
