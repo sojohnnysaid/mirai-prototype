@@ -60,9 +60,6 @@ export default function Dashboard() {
         await dispatch(deleteCourse(courseId));
         // Reload the library to reflect the changes
         await dispatch(loadCourseLibrary());
-
-        // Show success feedback (optional - you could add a toast notification here)
-        console.log(`Course ${courseId} deleted successfully`);
       } catch (error) {
         console.error('Failed to delete course:', error);
         // You could show an error toast here
