@@ -61,6 +61,28 @@ export const loadCourseLibrary = createAsyncThunk(
   }
 );
 
+// Prefetch folders for content library
+export const prefetchFolders = createAsyncThunk(
+  'course/prefetchFolders',
+  async (includeCourseCount: boolean = true) => {
+    const response = await fetch(`/api/folders?includeCourseCount=${includeCourseCount}`);
+    if (!response.ok) throw new Error('Failed to prefetch folders');
+    const result = await response.json();
+    return result.data;
+  }
+);
+
+// Prefetch courses for content library
+export const prefetchCourses = createAsyncThunk(
+  'course/prefetchCourses',
+  async () => {
+    const response = await fetch('/api/courses');
+    if (!response.ok) throw new Error('Failed to prefetch courses');
+    const result = await response.json();
+    return result.data;
+  }
+);
+
 export const deleteCourse = createAsyncThunk(
   'course/delete',
   async (courseId: string) => {
@@ -75,6 +97,7 @@ export const deleteCourse = createAsyncThunk(
 interface CourseState {
   currentCourse: Partial<Course>;
   courses: Course[];
+  folders: any[];
   currentStep: number;
   isGenerating: boolean;
   generatedContent: any;
@@ -83,6 +106,8 @@ interface CourseState {
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
+  foldersLoaded: boolean;
+  coursesLoaded: boolean;
 }
 
 const initialState: CourseState = {
@@ -101,6 +126,7 @@ const initialState: CourseState = {
     },
   },
   courses: [],
+  folders: [],
   currentStep: 1,
   isGenerating: false,
   generatedContent: null,
@@ -109,6 +135,8 @@ const initialState: CourseState = {
   isLoading: false,
   isSaving: false,
   error: null,
+  foldersLoaded: false,
+  coursesLoaded: false,
 };
 
 const courseSlice = createSlice({
@@ -353,6 +381,29 @@ const courseSlice = createSlice({
       .addCase(deleteCourse.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.error.message || 'Failed to delete course';
+      });
+
+    // Prefetch folders
+    builder
+      .addCase(prefetchFolders.fulfilled, (state, action) => {
+        state.folders = action.payload || [];
+        state.foldersLoaded = true;
+      })
+      .addCase(prefetchFolders.rejected, (state) => {
+        // Silent fail for prefetch
+        state.foldersLoaded = false;
+      });
+
+    // Prefetch courses
+    builder
+      .addCase(prefetchCourses.fulfilled, (state, action) => {
+        if (!state.coursesLoaded) {
+          state.courses = action.payload || [];
+          state.coursesLoaded = true;
+        }
+      })
+      .addCase(prefetchCourses.rejected, () => {
+        // Silent fail for prefetch
       });
   },
 });

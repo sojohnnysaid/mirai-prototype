@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '@/store';
+import { RootState, AppDispatch } from '@/store';
 import { toggleSidebar } from '@/store/slices/uiSlice';
+import { prefetchFolders, prefetchCourses } from '@/store/slices/courseSlice';
 import {
   LayoutDashboard,
   FileText,
@@ -37,7 +38,7 @@ const bottomItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const { sidebarOpen } = useSelector((state: RootState) => state.ui);
   const [showText, setShowText] = useState(sidebarOpen);
 
@@ -51,21 +52,15 @@ export default function Sidebar() {
   }, [sidebarOpen]);
 
   // Prefetch handler for aggressive hover prefetching
-  const handlePrefetch = async (path: string) => {
+  const handlePrefetch = (path: string) => {
     // Prefetch Next.js route
     router.prefetch(path);
 
     // Prefetch API data based on the route
     if (path === '/content-library') {
-      // Prefetch folders and courses data
-      try {
-        await Promise.all([
-          fetch('/api/folders?includeCourseCount=true'),
-          fetch('/api/courses')
-        ]);
-      } catch (error) {
-        // Silent fail - prefetch is optional
-      }
+      // Dispatch prefetch actions to load data into Redux
+      dispatch(prefetchFolders(true));
+      dispatch(prefetchCourses());
     }
   };
 

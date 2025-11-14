@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Folder, FolderOpen, Search, FileText, Users, User, Edit2, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@/store';
+import { prefetchFolders, prefetchCourses } from '@/store/slices/courseSlice';
 
 interface FolderNode {
   id: string;
@@ -24,6 +27,14 @@ interface Course {
 
 export default function ContentLibrary() {
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+
+  // Get data from Redux store
+  const reduxFolders = useSelector((state: RootState) => state.course.folders);
+  const reduxCourses = useSelector((state: RootState) => state.course.courses);
+  const foldersLoaded = useSelector((state: RootState) => state.course.foldersLoaded);
+  const coursesLoaded = useSelector((state: RootState) => state.course.coursesLoaded);
+
   const [folders, setFolders] = useState<FolderNode[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -34,31 +45,45 @@ export default function ContentLibrary() {
   // Load folders and courses on mount
   useEffect(() => {
     const loadData = async () => {
-      try {
-        setLoading(true);
-
-        // Load folders with course counts
-        const foldersResponse = await fetch('/api/folders?includeCourseCount=true');
-        if (foldersResponse.ok) {
-          const foldersResult = await foldersResponse.json();
-          setFolders(foldersResult.data);
+      // Check if data is already in Redux from prefetch
+      if (foldersLoaded && reduxFolders.length > 0) {
+        setFolders(reduxFolders);
+        console.log('Using prefetched folders from Redux');
+      } else {
+        // Fetch folders if not prefetched
+        try {
+          const foldersResponse = await fetch('/api/folders?includeCourseCount=true');
+          if (foldersResponse.ok) {
+            const foldersResult = await foldersResponse.json();
+            setFolders(foldersResult.data);
+          }
+        } catch (error) {
+          console.error('Failed to load folders:', error);
         }
-
-        // Load all courses
-        const coursesResponse = await fetch('/api/courses');
-        if (coursesResponse.ok) {
-          const coursesResult = await coursesResponse.json();
-          setCourses(coursesResult.data);
-        }
-      } catch (error) {
-        console.error('Failed to load data:', error);
-      } finally {
-        setLoading(false);
       }
+
+      // Check if courses are already in Redux from prefetch
+      if (coursesLoaded && reduxCourses.length > 0) {
+        setCourses(reduxCourses);
+        console.log('Using prefetched courses from Redux');
+      } else {
+        // Fetch courses if not prefetched
+        try {
+          const coursesResponse = await fetch('/api/courses');
+          if (coursesResponse.ok) {
+            const coursesResult = await coursesResponse.json();
+            setCourses(coursesResult.data);
+          }
+        } catch (error) {
+          console.error('Failed to load courses:', error);
+        }
+      }
+
+      setLoading(false);
     };
 
     loadData();
-  }, []);
+  }, [foldersLoaded, reduxFolders, coursesLoaded, reduxCourses]);
 
   // Load courses for selected folder
   useEffect(() => {

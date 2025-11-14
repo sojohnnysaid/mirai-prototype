@@ -32,6 +32,7 @@ const getPreloadedState = () => {
       },
     },
     courses: [],
+    folders: [],
     currentStep: 1,
     isGenerating: false,
     generatedContent: null,
@@ -40,6 +41,8 @@ const getPreloadedState = () => {
     isLoading: false,
     isSaving: false,
     error: null,
+    foldersLoaded: false,
+    coursesLoaded: false,
   };
 
   return {
