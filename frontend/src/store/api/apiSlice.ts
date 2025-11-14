@@ -34,8 +34,11 @@ export interface CourseData {
   learningObjectives?: any[];
   assessmentSettings?: any;
   content?: any;
-  status?: 'draft' | 'published';
+  status?: 'draft' | 'published' | 'generated';
   metadata?: any;
+  settings?: any;
+  sections?: any[];
+  [key: string]: any; // Allow additional properties
 }
 
 /**

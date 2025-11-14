@@ -8,10 +8,9 @@ import {
   updatePersona,
   removePersona,
   setCurrentStep,
-  createNewCourse,
-  saveCourse,
   loadCourse,
 } from '@/store/slices/courseSlice';
+import { useCreateCourseMutation, useUpdateCourseMutation } from '@/store/api/apiSlice';
 import Button from '@/components/ui/Button';
 import CourseForm from '@/components/course/CourseForm';
 import PersonaCard from '@/components/course/PersonaCard';
@@ -28,6 +27,10 @@ export default function CourseBuilder() {
   const { currentCourse, currentStep, courseBlocks } = useSelector((state: RootState) => state.course);
   const { isGenerating } = useSelector((state: RootState) => state.aiGeneration);
   const [showAIModal, setShowAIModal] = useState(false);
+
+  // RTK Query mutations
+  const [createCourse] = useCreateCourseMutation();
+  const [updateCourse] = useUpdateCourseMutation();
 
   // Use refs to track initialization state and prevent duplicate operations
   const hasInitialized = useRef(false);
@@ -68,7 +71,7 @@ export default function CourseBuilder() {
 
       const initializeCourse = async () => {
         try {
-          await dispatch(createNewCourse({
+          const result = await createCourse({
             title: '',
             desiredOutcome: '',
             destinationFolder: '',
@@ -80,7 +83,10 @@ export default function CourseBuilder() {
               enableEmbeddedKnowledgeChecks: true,
               enableFinalExam: true,
             },
-          }));
+          }).unwrap();
+
+          // Update Redux with the created course
+          dispatch(loadCourse(result.id));
         } finally {
           isCreatingCourse.current = false;
         }
@@ -117,13 +123,20 @@ export default function CourseBuilder() {
   const handleNext = async () => {
     // Save progress before moving to next step
     if (currentCourse.id) {
-      await dispatch(saveCourse({
-        id: currentCourse.id,
-        courseData: {
-          ...currentCourse,
-          sections: currentCourse.sections || [],
-        },
-      }));
+      try {
+        await updateCourse({
+          id: currentCourse.id,
+          data: {
+            ...currentCourse,
+            content: {
+              sections: currentCourse.sections || [],
+              courseBlocks: courseBlocks || []
+            },
+          },
+        }).unwrap();
+      } catch (error) {
+        console.error('Failed to save course:', error);
+      }
     }
     if (currentStep < 5) dispatch(setCurrentStep(currentStep + 1));
   };
