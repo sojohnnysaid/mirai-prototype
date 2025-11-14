@@ -32,22 +32,29 @@ export default function ContentLibrary() {
   const foldersLoaded = useSelector((state: RootState) => state.course.foldersLoaded);
   const coursesLoaded = useSelector((state: RootState) => state.course.coursesLoaded);
 
-  const [folders, setFolders] = useState<FolderNode[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  // Initialize state with Redux data if available (for instant rendering)
+  const [folders, setFolders] = useState<FolderNode[]>(foldersLoaded ? reduxFolders : []);
+  const [courses, setCourses] = useState<Course[]>(coursesLoaded ? reduxCourses as any : []);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['library', 'team', 'personal']));
-  const [loading, setLoading] = useState(true);
+  // Only show loading if data is NOT already loaded
+  const [loading, setLoading] = useState(!foldersLoaded || !coursesLoaded);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load folders and courses on mount
+  // Load folders and courses on mount (only if not already prefetched)
   useEffect(() => {
+    // If both are already loaded from prefetch, skip entirely
+    if (foldersLoaded && coursesLoaded && reduxFolders.length > 0 && reduxCourses.length > 0) {
+      console.log('Using prefetched data - no fetch needed');
+      return;
+    }
+
     const loadData = async () => {
-      // Check if data is already in Redux from prefetch
-      if (foldersLoaded && reduxFolders.length > 0) {
-        setFolders(reduxFolders);
-        console.log('Using prefetched folders from Redux');
-      } else {
-        // Fetch folders if not prefetched
+      let needsLoading = false;
+
+      // Fetch folders if not prefetched
+      if (!foldersLoaded || reduxFolders.length === 0) {
+        needsLoading = true;
         try {
           const foldersResponse = await fetch('/api/folders?includeCourseCount=true');
           if (foldersResponse.ok) {
@@ -59,12 +66,9 @@ export default function ContentLibrary() {
         }
       }
 
-      // Check if courses are already in Redux from prefetch
-      if (coursesLoaded && reduxCourses.length > 0) {
-        setCourses(reduxCourses as any);
-        console.log('Using prefetched courses from Redux');
-      } else {
-        // Fetch courses if not prefetched
+      // Fetch courses if not prefetched
+      if (!coursesLoaded || reduxCourses.length === 0) {
+        needsLoading = true;
         try {
           const coursesResponse = await fetch('/api/courses');
           if (coursesResponse.ok) {
@@ -76,7 +80,9 @@ export default function ContentLibrary() {
         }
       }
 
-      setLoading(false);
+      if (needsLoading) {
+        setLoading(false);
+      }
     };
 
     loadData();
