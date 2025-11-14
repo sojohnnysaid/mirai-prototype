@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSelector, useDispatch } from 'react-redux';
@@ -42,6 +42,9 @@ export default function Sidebar() {
   const { sidebarOpen } = useSelector((state: RootState) => state.ui);
   const [showText, setShowText] = useState(sidebarOpen);
 
+  // Track which paths have already been prefetched
+  const prefetchedPaths = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (sidebarOpen) {
       const timer = setTimeout(() => setShowText(true), 50);
@@ -53,6 +56,14 @@ export default function Sidebar() {
 
   // Prefetch handler for aggressive hover prefetching
   const handlePrefetch = (path: string) => {
+    // Skip if already prefetched
+    if (prefetchedPaths.current.has(path)) {
+      return;
+    }
+
+    // Mark as prefetched
+    prefetchedPaths.current.add(path);
+
     // Prefetch Next.js route
     router.prefetch(path);
 
