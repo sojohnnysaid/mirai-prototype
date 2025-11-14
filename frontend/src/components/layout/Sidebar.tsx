@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store';
@@ -36,6 +36,7 @@ const bottomItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const dispatch = useDispatch();
   const { sidebarOpen } = useSelector((state: RootState) => state.ui);
   const [showText, setShowText] = useState(sidebarOpen);
@@ -49,12 +50,18 @@ export default function Sidebar() {
     }
   }, [sidebarOpen]);
 
+  // Prefetch handler for aggressive hover prefetching
+  const handlePrefetch = (path: string) => {
+    router.prefetch(path);
+  };
+
   return (
     <aside className={`sidebar ${!sidebarOpen ? 'collapsed' : ''}`}>
       <Link
         href="/dashboard"
         className="sidebar-header cursor-pointer"
         prefetch={true}
+        onMouseEnter={() => handlePrefetch('/dashboard')}
       >
         <div className="sidebar-avatar">
           <span className="text-white font-bold text-sm">M</span>
@@ -86,6 +93,7 @@ export default function Sidebar() {
               href={item.path}
               className={`menu-item ${isActive ? 'active' : ''}`}
               prefetch={true}
+              onMouseEnter={() => handlePrefetch(item.path)}
             >
               <Icon className="menu-icon" />
               <span className={`menu-label ${showText ? 'animate-fadeIn' : 'animate-fadeOut'}`}>
@@ -104,6 +112,7 @@ export default function Sidebar() {
                 href={item.path}
                 className="recent-item"
                 prefetch={true}
+                onMouseEnter={() => handlePrefetch(item.path)}
               >
                 <div className="recent-dot" />
                 <span className="menu-label">{item.label}</span>
@@ -122,6 +131,7 @@ export default function Sidebar() {
               href={item.path}
               className="menu-item"
               prefetch={true}
+              onMouseEnter={() => handlePrefetch(item.path)}
             >
               <Icon className="menu-icon" />
               <span className={`menu-label ${showText ? 'animate-fadeIn' : 'animate-fadeOut'}`}>
