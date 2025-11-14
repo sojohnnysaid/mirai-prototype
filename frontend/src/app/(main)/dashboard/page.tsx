@@ -1,29 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, Clock, FileText, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 import CourseCreationModal from '@/components/dashboard/CourseCreationModal';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/store';
-import { loadCourseLibrary, deleteCourse } from '@/store/slices/courseSlice';
+import { useGetCoursesQuery, useDeleteCourseMutation, LibraryEntry } from '@/store/api/apiSlice';
 import { useRouter } from 'next/navigation';
 
 export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'recent' | 'draft' | 'published'>('recent');
-  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
-  const { courses, isLoading, coursesLoaded } = useSelector((state: RootState) => state.course);
 
-  // Load courses on mount (only if not already prefetched)
-  useEffect(() => {
-    // If courses are already loaded from prefetch, skip
-    if (coursesLoaded && courses.length > 0) {
-      return;
-    }
-
-    dispatch(loadCourseLibrary());
-  }, [dispatch, coursesLoaded, courses.length]);
+  // RTK Query - automatically fetches and caches
+  const { data: courses = [], isLoading } = useGetCoursesQuery();
+  const [deleteCourse] = useDeleteCourseMutation();
 
   // Filter courses based on active tab - handle undefined courses array
   const filteredCourses = (courses || []).filter(course => {
@@ -61,13 +51,10 @@ export default function Dashboard() {
 
     if (confirm(confirmMessage)) {
       try {
-        // Delete the course through the API
-        await dispatch(deleteCourse(courseId));
-        // Reload the library to reflect the changes
-        await dispatch(loadCourseLibrary());
+        // Delete the course - RTK Query automatically refetches courses and folders!
+        await deleteCourse(courseId).unwrap();
       } catch (error) {
         console.error('Failed to delete course:', error);
-        // You could show an error toast here
         alert('Failed to delete course. Please try again.');
       }
     }
@@ -141,13 +128,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {(isLoading && !coursesLoaded) ? (
+        {isLoading ? (
           <div className="min-h-[300px] flex items-center justify-center">
             <div className="text-gray-500">Loading courses...</div>
           </div>
         ) : filteredCourses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCourses.map((course: any) => (
+            {filteredCourses.map((course: LibraryEntry) => (
               <div
                 key={course.id}
                 className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -174,11 +161,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                  {course.desiredOutcome || 'No outcome defined'}
-                </p>
-
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-xs mt-3">
                   <div className="flex items-center gap-1">
                     {course.status === 'published' ? (
                       <>

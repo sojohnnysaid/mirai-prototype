@@ -3,44 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Folder, FolderOpen, Search, FileText, Users, User, Edit2, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '@/store';
-import { prefetchFolders, prefetchCourses, LibraryEntry } from '@/store/slices/courseSlice';
-
-interface FolderNode {
-  id: string;
-  name: string;
-  type?: 'library' | 'team' | 'personal' | 'folder';
-  children?: FolderNode[];
-  courseCount?: number;
-}
+import { useGetFoldersQuery, useGetCoursesQuery, FolderNode, LibraryEntry } from '@/store/api/apiSlice';
 
 export default function ContentLibrary() {
   const router = useRouter();
-  const dispatch = useDispatch<AppDispatch>();
 
-  // Get data from Redux store (single source of truth)
-  const folders = useSelector((state: RootState) => state.course.folders);
-  const courses = useSelector((state: RootState) => state.course.courses);
-  const foldersLoaded = useSelector((state: RootState) => state.course.foldersLoaded);
-  const coursesLoaded = useSelector((state: RootState) => state.course.coursesLoaded);
-  const isLoading = useSelector((state: RootState) => state.course.isLoading);
+  // RTK Query - automatically fetches and caches data
+  const { data: folders = [], isLoading: foldersLoading } = useGetFoldersQuery(true);
+  const { data: courses = [], isLoading: coursesLoading } = useGetCoursesQuery();
 
   // Local UI state only
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['library', 'team', 'personal']));
   const [searchQuery, setSearchQuery] = useState('');
   const [folderFilteredCourses, setFolderFilteredCourses] = useState<LibraryEntry[] | null>(null);
-
-  // Load folders and courses on mount if not already loaded
-  useEffect(() => {
-    if (!foldersLoaded) {
-      dispatch(prefetchFolders(true));
-    }
-    if (!coursesLoaded) {
-      dispatch(prefetchCourses());
-    }
-  }, [dispatch, foldersLoaded, coursesLoaded]);
 
   // Load courses for selected folder
   useEffect(() => {
@@ -170,7 +146,7 @@ export default function ContentLibrary() {
       <div className="flex gap-6">
         {/* Left: Folder Sidebar */}
         <div className="w-80 bg-primary-50 border border-gray-200 rounded-2xl p-4 h-[calc(100vh-200px)] overflow-y-auto">
-          {!foldersLoaded && isLoading ? (
+          {foldersLoading ? (
             <div className="text-center text-gray-600 py-4">Loading folders...</div>
           ) : (
             <div className="space-y-2">
@@ -194,7 +170,7 @@ export default function ContentLibrary() {
             </div>
           </div>
 
-          {!coursesLoaded && isLoading ? (
+          {coursesLoading ? (
             <div className="text-center text-gray-600 py-12">Loading courses...</div>
           ) : filteredCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

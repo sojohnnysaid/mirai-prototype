@@ -3,6 +3,7 @@ import courseReducer from './slices/courseSlice';
 import uiReducer from './slices/uiSlice';
 import aiGenerationReducer from './slices/aiGenerationSlice';
 import { persistenceMiddleware, restoreFromLocalStorage } from './middleware/persistenceMiddleware';
+import { api } from './api/apiSlice';
 
 // Only restore state on client-side
 const getPreloadedState = () => {
@@ -65,6 +66,7 @@ export const store = configureStore({
     course: courseReducer,
     ui: uiReducer,
     aiGeneration: aiGenerationReducer,
+    [api.reducerPath]: api.reducer, // Add RTK Query reducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -72,7 +74,9 @@ export const store = configureStore({
         // Ignore these action types
         ignoredActions: ['course/saveCourse/fulfilled', 'course/loadCourse/fulfilled'],
       },
-    }).concat(persistenceMiddleware),
+    })
+    .concat(api.middleware) // Add RTK Query middleware
+    .concat(persistenceMiddleware),
   preloadedState,
 });
 
