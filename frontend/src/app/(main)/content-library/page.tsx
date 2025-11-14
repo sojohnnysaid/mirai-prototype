@@ -26,91 +26,42 @@ export default function ContentLibrary() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Get data from Redux store
-  const reduxFolders = useSelector((state: RootState) => state.course.folders);
-  const reduxCourses = useSelector((state: RootState) => state.course.courses);
+  // Get data from Redux store (single source of truth)
+  const folders = useSelector((state: RootState) => state.course.folders);
+  const courses = useSelector((state: RootState) => state.course.courses);
   const foldersLoaded = useSelector((state: RootState) => state.course.foldersLoaded);
   const coursesLoaded = useSelector((state: RootState) => state.course.coursesLoaded);
+  const isLoading = useSelector((state: RootState) => state.course.isLoading);
 
-  // Initialize state with Redux data if available (for instant rendering)
-  const [folders, setFolders] = useState<FolderNode[]>(foldersLoaded ? reduxFolders : []);
-  const [courses, setCourses] = useState<Course[]>(coursesLoaded ? reduxCourses as any : []);
+  // Local UI state only
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['library', 'team', 'personal']));
-  // Only show loading if data is NOT already loaded
-  const [loading, setLoading] = useState(!foldersLoaded || !coursesLoaded);
   const [searchQuery, setSearchQuery] = useState('');
+  const [folderFilteredCourses, setFolderFilteredCourses] = useState<Course[] | null>(null);
 
-  // Sync Redux folders to local state when they update
+  // Load folders and courses on mount if not already loaded
   useEffect(() => {
-    if (foldersLoaded && reduxFolders.length > 0) {
-      setFolders(reduxFolders);
+    if (!foldersLoaded) {
+      dispatch(prefetchFolders(true));
     }
-  }, [foldersLoaded, reduxFolders]);
-
-  // Sync Redux courses to local state when they update
-  useEffect(() => {
-    if (coursesLoaded && reduxCourses.length > 0) {
-      setCourses(reduxCourses as any);
+    if (!coursesLoaded) {
+      dispatch(prefetchCourses());
     }
-  }, [coursesLoaded, reduxCourses]);
-
-  // Load folders and courses on mount (only if not already prefetched)
-  useEffect(() => {
-    // If both are already loaded from prefetch, skip entirely
-    if (foldersLoaded && coursesLoaded && reduxFolders.length > 0 && reduxCourses.length > 0) {
-      return;
-    }
-
-    const loadData = async () => {
-      let needsLoading = false;
-
-      // Fetch folders if not prefetched
-      if (!foldersLoaded || reduxFolders.length === 0) {
-        needsLoading = true;
-        try {
-          const foldersResponse = await fetch('/api/folders?includeCourseCount=true');
-          if (foldersResponse.ok) {
-            const foldersResult = await foldersResponse.json();
-            setFolders(foldersResult.data);
-          }
-        } catch (error) {
-          console.error('Failed to load folders:', error);
-        }
-      }
-
-      // Fetch courses if not prefetched
-      if (!coursesLoaded || reduxCourses.length === 0) {
-        needsLoading = true;
-        try {
-          const coursesResponse = await fetch('/api/courses');
-          if (coursesResponse.ok) {
-            const coursesResult = await coursesResponse.json();
-            setCourses(coursesResult.data);
-          }
-        } catch (error) {
-          console.error('Failed to load courses:', error);
-        }
-      }
-
-      if (needsLoading) {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [foldersLoaded, reduxFolders, coursesLoaded, reduxCourses]);
+  }, [dispatch, foldersLoaded, coursesLoaded]);
 
   // Load courses for selected folder
   useEffect(() => {
     const loadFolderCourses = async () => {
-      if (!selectedFolderId) return;
+      if (!selectedFolderId) {
+        setFolderFilteredCourses(null);
+        return;
+      }
 
       try {
         const response = await fetch(`/api/library?folder=${selectedFolderId}&includeSubfolders=true`);
         if (response.ok) {
           const result = await response.json();
-          setCourses(result.data.courses);
+          setFolderFilteredCourses(result.data.courses);
         }
       } catch (error) {
         console.error('Failed to load folder courses:', error);
@@ -195,7 +146,10 @@ export default function ContentLibrary() {
     );
   };
 
-  const filteredCourses = courses.filter(course => {
+  // Use folder-filtered courses if a folder is selected, otherwise use all courses from Redux
+  const displayCourses = folderFilteredCourses || courses;
+
+  const filteredCourses = displayCourses.filter(course => {
     if (!searchQuery) return true;
 
     const query = searchQuery.toLowerCase();
@@ -223,7 +177,7 @@ export default function ContentLibrary() {
       <div className="flex gap-6">
         {/* Left: Folder Sidebar */}
         <div className="w-80 bg-primary-50 border border-gray-200 rounded-2xl p-4 h-[calc(100vh-200px)] overflow-y-auto">
-          {loading ? (
+          {!foldersLoaded && isLoading ? (
             <div className="text-center text-gray-600 py-4">Loading folders...</div>
           ) : (
             <div className="space-y-2">
@@ -247,7 +201,7 @@ export default function ContentLibrary() {
             </div>
           </div>
 
-          {loading ? (
+          {!coursesLoaded && isLoading ? (
             <div className="text-center text-gray-600 py-12">Loading courses...</div>
           ) : filteredCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
