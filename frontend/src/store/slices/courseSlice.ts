@@ -1,6 +1,19 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { Course, Persona, LearningObjective, CourseBlock, CourseSection, CourseAssessmentSettings } from '@/types';
 
+// LibraryEntry type for course listings (matches backend LibraryEntry)
+export interface LibraryEntry {
+  id: string;
+  title: string;
+  status: 'draft' | 'published';
+  folder: string;
+  tags: string[];
+  createdAt: string;
+  modifiedAt: string;
+  createdBy?: string;
+  thumbnailPath?: string;
+}
+
 // Async thunks for API operations
 export const createNewCourse = createAsyncThunk(
   'course/createNew',
@@ -96,7 +109,7 @@ export const deleteCourse = createAsyncThunk(
 
 interface CourseState {
   currentCourse: Partial<Course>;
-  courses: Course[];
+  courses: LibraryEntry[]; // Course listings from library (with tags, folder, etc.)
   folders: any[];
   currentStep: number;
   isGenerating: boolean;
@@ -219,7 +232,7 @@ const courseSlice = createSlice({
       };
       state.currentStep = 1;
     },
-    addCourse: (state, action: PayloadAction<Course>) => {
+    addCourse: (state, action: PayloadAction<LibraryEntry>) => {
       state.courses.push(action.payload);
     },
     // New block management actions
