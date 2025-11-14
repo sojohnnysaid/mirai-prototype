@@ -419,13 +419,12 @@ const courseSlice = createSlice({
     // Prefetch courses
     builder
       .addCase(prefetchCourses.fulfilled, (state, action) => {
-        if (!state.coursesLoaded) {
-          state.courses = action.payload || [];
-          state.coursesLoaded = true;
-        }
+        state.courses = action.payload || [];
+        state.coursesLoaded = true;
       })
-      .addCase(prefetchCourses.rejected, () => {
+      .addCase(prefetchCourses.rejected, (state) => {
         // Silent fail for prefetch
+        state.coursesLoaded = false;
       });
   },
 });
