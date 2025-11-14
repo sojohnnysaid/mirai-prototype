@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
 import { prefetchFolders, prefetchCourses } from '@/store/slices/courseSlice';
-import { Course as GlobalCourse } from '@/types';
 
 interface FolderNode {
   id: string;
@@ -16,10 +15,17 @@ interface FolderNode {
   courseCount?: number;
 }
 
-// Course type for library listing (extends global Course with library-specific fields)
-interface Course extends Pick<GlobalCourse, 'id' | 'title' | 'status' | 'createdAt' | 'modifiedAt'> {
+// Course type for library listing (LibraryEntry from storage)
+interface LibraryCourse {
+  id: string;
+  title: string;
+  status: 'draft' | 'published';
   folder: string;
   tags: string[];
+  createdAt: string;
+  modifiedAt: string;
+  createdBy?: string;
+  thumbnailPath?: string;
 }
 
 export default function ContentLibrary() {
@@ -28,7 +34,7 @@ export default function ContentLibrary() {
 
   // Get data from Redux store (single source of truth)
   const folders = useSelector((state: RootState) => state.course.folders);
-  const courses = useSelector((state: RootState) => state.course.courses);
+  const courses = useSelector((state: RootState) => state.course.courses) as LibraryCourse[];
   const foldersLoaded = useSelector((state: RootState) => state.course.foldersLoaded);
   const coursesLoaded = useSelector((state: RootState) => state.course.coursesLoaded);
   const isLoading = useSelector((state: RootState) => state.course.isLoading);
@@ -37,7 +43,7 @@ export default function ContentLibrary() {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['library', 'team', 'personal']));
   const [searchQuery, setSearchQuery] = useState('');
-  const [folderFilteredCourses, setFolderFilteredCourses] = useState<Course[] | null>(null);
+  const [folderFilteredCourses, setFolderFilteredCourses] = useState<LibraryCourse[] | null>(null);
 
   // Load folders and courses on mount if not already loaded
   useEffect(() => {
