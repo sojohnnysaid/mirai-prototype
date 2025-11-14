@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
 import { prefetchFolders, prefetchCourses } from '@/store/slices/courseSlice';
+import { Course as GlobalCourse } from '@/types';
 
 interface FolderNode {
   id: string;
@@ -15,14 +16,10 @@ interface FolderNode {
   courseCount?: number;
 }
 
-interface Course {
-  id: string;
-  title: string;
-  status: 'draft' | 'published' | 'generated';
+// Course type for library listing (extends global Course with library-specific fields)
+interface Course extends Pick<GlobalCourse, 'id' | 'title' | 'status' | 'createdAt' | 'modifiedAt'> {
   folder: string;
   tags: string[];
-  createdAt: string;
-  modifiedAt: string;
 }
 
 export default function ContentLibrary() {
@@ -64,7 +61,7 @@ export default function ContentLibrary() {
 
       // Check if courses are already in Redux from prefetch
       if (coursesLoaded && reduxCourses.length > 0) {
-        setCourses(reduxCourses);
+        setCourses(reduxCourses as any);
         console.log('Using prefetched courses from Redux');
       } else {
         // Fetch courses if not prefetched
