@@ -5,6 +5,7 @@ import {
   getCoursesByFolder,
   getFolderPath
 } from '@/lib/storage/courseStorage';
+import { getCache, CacheKeys } from '@/lib/cache/redisCache';
 
 // GET /api/folders - Get hierarchical folder structure or specific folder details
 export async function GET(request: NextRequest) {
@@ -13,6 +14,9 @@ export async function GET(request: NextRequest) {
     const folderId = searchParams.get('id');
     const format = searchParams.get('format') || 'hierarchy';
     const includeCourseCount = searchParams.get('includeCourseCount') === 'true';
+
+    const cache = getCache();
+    await cache.connect();
 
     const folders = await getFolders();
 
@@ -45,7 +49,23 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Try to get cached folder hierarchy (without course counts)
+    const cacheKey = CacheKeys.folders();
     let result: any;
+
+    if (!includeCourseCount) {
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        console.log('Cache HIT: folders hierarchy');
+        result = cached.data;
+
+        return NextResponse.json({
+          success: true,
+          data: result,
+        });
+      }
+      console.log('Cache MISS: folders hierarchy');
+    }
 
     if (format === 'flat') {
       // Return flat array as stored
@@ -55,7 +75,12 @@ export async function GET(request: NextRequest) {
       result = buildFolderHierarchy(folders);
     }
 
-    // Optionally add course counts
+    // Cache the hierarchy (24 hour TTL since folder structure rarely changes)
+    if (!includeCourseCount) {
+      await cache.set(cacheKey, result, undefined, 86400); // 24 hours
+    }
+
+    // Optionally add course counts (not cached as they change frequently)
     if (includeCourseCount) {
       const addCourseCount = async (folder: any) => {
         const courses = await getCoursesByFolder(folder.id, false);

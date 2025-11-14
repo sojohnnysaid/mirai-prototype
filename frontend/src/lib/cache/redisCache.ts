@@ -272,6 +272,7 @@ export function getCache(): RedisCache {
  */
 export const CacheKeys = {
   library: () => 'library:index',
+  folders: () => 'folders:hierarchy',
   course: (id: string) => `course:${id}`,
   folderCourses: (folderId: string) => `folder:${folderId}:courses`,
   allCourses: () => 'courses:all',

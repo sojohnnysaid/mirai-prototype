@@ -198,7 +198,8 @@ export class CachedStorageAdapter implements IStorageAdapter {
    */
   private async invalidateRelatedCaches(filePath: string): Promise<void> {
     if (filePath.includes('library.json')) {
-      // Library changed, invalidate all course lists
+      // Library changed, invalidate all course lists and folder hierarchy
+      await this.cache.delete(CacheKeys.folders());
       await this.cache.invalidatePattern('courses:*');
       await this.cache.invalidatePattern('folder:*');
     } else if (filePath.includes('course-')) {
