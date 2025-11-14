@@ -49,23 +49,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Try to get cached folder hierarchy (without course counts)
-    const cacheKey = CacheKeys.folders();
+    // Try to get cached folder hierarchy
+    const cacheKey = includeCourseCount ? `${CacheKeys.folders()}:withCounts` : CacheKeys.folders();
     let result: any;
 
-    if (!includeCourseCount) {
-      const cached = await cache.get(cacheKey);
-      if (cached) {
-        console.log('Cache HIT: folders hierarchy');
-        result = cached.data;
-
-        return NextResponse.json({
-          success: true,
-          data: result,
-        });
-      }
-      console.log('Cache MISS: folders hierarchy');
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      console.log(`Cache HIT: folders hierarchy ${includeCourseCount ? 'with counts' : ''}`);
+      return NextResponse.json({
+        success: true,
+        data: cached.data,
+      });
     }
+    console.log(`Cache MISS: folders hierarchy ${includeCourseCount ? 'with counts' : ''}`);
 
     if (format === 'flat') {
       // Return flat array as stored
@@ -75,12 +71,12 @@ export async function GET(request: NextRequest) {
       result = buildFolderHierarchy(folders);
     }
 
-    // Cache the hierarchy (24 hour TTL since folder structure rarely changes)
-    if (!includeCourseCount) {
-      await cache.set(cacheKey, result, undefined, 86400); // 24 hours
-    }
+    // Cache the hierarchy
+    // Base structure: 24 hour TTL since it rarely changes
+    // With counts: 5 minute TTL since course counts change more frequently
+    const ttl = includeCourseCount ? 300 : 86400; // 5 minutes or 24 hours
 
-    // Optionally add course counts (not cached as they change frequently)
+    // Optionally add course counts
     if (includeCourseCount) {
       const addCourseCount = async (folder: any) => {
         const courses = await getCoursesByFolder(folder.id, false);
@@ -102,6 +98,9 @@ export async function GET(request: NextRequest) {
         await addCourseCount(result);
       }
     }
+
+    // Cache the final result
+    await cache.set(cacheKey, result, undefined, ttl);
 
     return NextResponse.json({
       success: true,

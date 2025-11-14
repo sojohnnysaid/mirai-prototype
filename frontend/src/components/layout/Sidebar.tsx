@@ -51,8 +51,22 @@ export default function Sidebar() {
   }, [sidebarOpen]);
 
   // Prefetch handler for aggressive hover prefetching
-  const handlePrefetch = (path: string) => {
+  const handlePrefetch = async (path: string) => {
+    // Prefetch Next.js route
     router.prefetch(path);
+
+    // Prefetch API data based on the route
+    if (path === '/content-library') {
+      // Prefetch folders and courses data
+      try {
+        await Promise.all([
+          fetch('/api/folders?includeCourseCount=true'),
+          fetch('/api/courses')
+        ]);
+      } catch (error) {
+        // Silent fail - prefetch is optional
+      }
+    }
   };
 
   return (
