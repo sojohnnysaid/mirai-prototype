@@ -7,7 +7,8 @@ import {
   HeadObjectCommand
 } from '@aws-sdk/client-s3';
 import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
-import { Agent } from 'https';
+import { Agent as HttpAgent } from 'http';
+import { Agent as HttpsAgent } from 'https';
 import { Readable } from 'stream';
 
 // S3/MinIO storage adapter for production
@@ -32,11 +33,20 @@ export class S3Storage {
       );
     }
 
-    // Create HTTP agent with connection pooling
-    const httpAgent = new Agent({
+    // Determine if endpoint uses HTTP or HTTPS
+    const isHttps = endpoint.startsWith('https://');
+
+    // Create appropriate agent based on protocol
+    const httpAgent = new HttpAgent({
       keepAlive: true,
       maxSockets: 50,        // Maximum concurrent connections
       keepAliveMsecs: 10000, // Keep alive for 10 seconds
+    });
+
+    const httpsAgent = new HttpsAgent({
+      keepAlive: true,
+      maxSockets: 50,
+      keepAliveMsecs: 10000,
     });
 
     this.s3Client = new S3Client({
@@ -48,8 +58,8 @@ export class S3Storage {
       },
       forcePathStyle: true, // Required for MinIO
       requestHandler: new NodeHttpHandler({
-        httpAgent: httpAgent as any,
-        httpsAgent: httpAgent,
+        httpAgent: httpAgent,
+        httpsAgent: httpsAgent,
         connectionTimeout: 5000,
         socketTimeout: 5000,
       }),
