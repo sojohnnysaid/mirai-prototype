@@ -377,6 +377,9 @@ const courseSlice = createSlice({
       .addCase(deleteCourse.fulfilled, (state, action) => {
         state.isLoading = false;
         state.courses = state.courses.filter(c => c.id !== action.payload);
+        // Invalidate prefetch cache so content library refetches fresh data
+        state.foldersLoaded = false;
+        state.coursesLoaded = false;
       })
       .addCase(deleteCourse.rejected, (state, action) => {
         state.isLoading = false;

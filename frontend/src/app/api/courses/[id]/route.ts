@@ -5,6 +5,7 @@ import {
   deleteCourse,
   StoredCourse
 } from '@/lib/storage/courseStorage';
+import { getCache, CacheKeys } from '@/lib/cache/redisCache';
 
 // GET /api/courses/[id] - Get a specific course
 export async function GET(
@@ -104,6 +105,28 @@ export async function DELETE(
         { status: 500 }
       );
     }
+
+    // Bust all related caches after successful deletion
+    const cache = getCache();
+    await cache.connect();
+
+    // Invalidate library cache (library.json)
+    await cache.delete(CacheKeys.library());
+
+    // Invalidate folder hierarchy caches (especially withCounts for content library)
+    await cache.delete(CacheKeys.folders());
+    await cache.delete(`${CacheKeys.folders()}:withCounts`);
+
+    // Invalidate all course-related caches
+    await cache.invalidatePattern('courses:*');
+
+    // Invalidate folder-specific course caches
+    await cache.invalidatePattern('folder:*');
+
+    // Invalidate the specific course cache
+    await cache.delete(CacheKeys.course(params.id));
+
+    console.log(`Cache invalidated for deleted course ${params.id}`);
 
     return NextResponse.json({
       success: true,
