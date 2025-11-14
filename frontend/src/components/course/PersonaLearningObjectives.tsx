@@ -20,6 +20,7 @@ export default function PersonaLearningObjectives({
   isGenerating = false
 }: PersonaLearningObjectivesProps) {
   const [localObjectives, setLocalObjectives] = useState<string[]>([]);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (objectives && objectives.length > 0) {
@@ -58,8 +59,7 @@ export default function PersonaLearningObjectives({
       .map((text, index) => ({
         id: `obj-${personaRole}-${index + 1}`,
         text: text,
-      }))
-      .filter(obj => obj.text.trim().length > 0);
+      }));
     onChange(learningObjectives);
   };
 
@@ -72,6 +72,42 @@ export default function PersonaLearningObjectives({
     [newObjectives[toIndex], newObjectives[fromIndex]];
     setLocalObjectives(newObjectives);
     saveObjectivesToParent(newObjectives);
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    // Add a slight opacity to the dragged element
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedIndex(null);
+    // Reset opacity
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
+
+    const newObjectives = [...localObjectives];
+    const [draggedItem] = newObjectives.splice(draggedIndex, 1);
+    newObjectives.splice(dropIndex, 0, draggedItem);
+
+    setLocalObjectives(newObjectives);
+    saveObjectivesToParent(newObjectives);
+    setDraggedIndex(null);
   };
 
   return (
@@ -111,15 +147,20 @@ export default function PersonaLearningObjectives({
         {localObjectives.map((objective, index) => (
           <div
             key={index}
-            className="flex items-start gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:border-purple-300 transition-colors"
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragEnd={handleDragEnd}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, index)}
+            className="flex items-start gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:border-purple-300 transition-colors cursor-move"
           >
             {/* Drag Handle */}
-            <button
+            <div
               className="mt-1 text-gray-400 hover:text-gray-600 cursor-move"
               title="Drag to reorder"
             >
               <GripVertical size={16} />
-            </button>
+            </div>
 
             {/* Objective Number */}
             <div className="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-semibold">
@@ -181,14 +222,6 @@ export default function PersonaLearningObjectives({
           <span>Add Learning Objective</span>
         </button>
       )}
-
-      {/* Helper Text */}
-      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-        <p className="text-xs text-blue-700">
-          <strong>💡 Tip:</strong> Define specific, measurable objectives for what {personaRole} should achieve.
-          Use action verbs like: Apply, Demonstrate, Execute, or Implement.
-        </p>
-      </div>
     </div>
   );
 }

@@ -336,14 +336,6 @@ export default function PersonaDetailForm() {
           </div>
         </div>
       </div>
-
-      {/* Helper Text */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-700">
-          <strong>💡 Tip:</strong> The more detailed your persona descriptions, the better the AI can tailor
-          the course content to their specific needs and learning style.
-        </p>
-      </div>
     </div>
   );
 }
