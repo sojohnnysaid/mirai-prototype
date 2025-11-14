@@ -261,10 +261,50 @@ let cacheInstance: RedisCache | null = null;
  * Get or create cache instance
  */
 export function getCache(): RedisCache {
+  // Don't create cache instance if Redis is disabled
+  if (process.env.ENABLE_REDIS_CACHE === 'false') {
+    // Return a no-op cache that doesn't connect to Redis
+    console.log('Redis caching disabled - using no-op cache');
+    return new NoOpCache() as any;
+  }
+
   if (!cacheInstance) {
     cacheInstance = new RedisCache();
   }
   return cacheInstance;
+}
+
+/**
+ * No-op cache for when Redis is disabled
+ */
+class NoOpCache extends RedisCache {
+  async connect(): Promise<void> {
+    // No-op
+  }
+
+  async get<T>(key: string): Promise<CacheEntry<T> | null> {
+    return null; // Always cache miss
+  }
+
+  async set<T>(key: string, data: T, etag?: string, ttl?: number): Promise<{ success: boolean; newEtag: string }> {
+    return { success: true, newEtag: '' }; // Pretend success
+  }
+
+  async delete(key: string): Promise<boolean> {
+    return true; // Pretend success
+  }
+
+  async invalidatePattern(pattern: string): Promise<void> {
+    // No-op
+  }
+
+  async acquireLock(lockKey: string, ttl?: number): Promise<{ acquired: boolean; lockId: string }> {
+    return { acquired: true, lockId: 'no-op' }; // Always acquire
+  }
+
+  async releaseLock(lockKey: string, lockId: string): Promise<boolean> {
+    return true; // Always release
+  }
 }
 
 /**
