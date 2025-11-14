@@ -68,10 +68,21 @@ export default function Sidebar() {
     router.prefetch(path);
 
     // Prefetch API data based on the route
-    if (path === '/content-library') {
-      // Dispatch prefetch actions to load data into Redux
-      dispatch(prefetchFolders(true));
-      dispatch(prefetchCourses());
+    switch (path) {
+      case '/dashboard':
+        // Dashboard needs courses list
+        dispatch(prefetchCourses());
+        break;
+      case '/content-library':
+        // Content library needs folders and courses
+        dispatch(prefetchFolders(true));
+        dispatch(prefetchCourses());
+        break;
+      // Templates, Tutorials, Settings, Help, Updates don't need API data (static pages)
+      // Team folders could prefetch folder-specific data in the future
+      default:
+        // Just prefetch the Next.js route (already done above)
+        break;
     }
   };
 
