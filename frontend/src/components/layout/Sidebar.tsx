@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store';
 import { toggleSidebar } from '@/store/slices/uiSlice';
@@ -35,7 +36,6 @@ const bottomItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const dispatch = useDispatch();
   const { sidebarOpen } = useSelector((state: RootState) => state.ui);
   const [showText, setShowText] = useState(sidebarOpen);
@@ -51,9 +51,10 @@ export default function Sidebar() {
 
   return (
     <aside className={`sidebar ${!sidebarOpen ? 'collapsed' : ''}`}>
-      <button 
-        onClick={() => router.push('/dashboard')}
+      <Link
+        href="/dashboard"
         className="sidebar-header cursor-pointer"
+        prefetch={true}
       >
         <div className="sidebar-avatar">
           <span className="text-white font-bold text-sm">M</span>
@@ -61,7 +62,7 @@ export default function Sidebar() {
         <span className={`sidebar-brand ${showText ? 'animate-fadeIn' : 'animate-fadeOut'}`}>
           Mirai
         </span>
-      </button>
+      </Link>
 
       <button
         onClick={() => dispatch(toggleSidebar())}
@@ -78,18 +79,19 @@ export default function Sidebar() {
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
-          
+
           return (
-            <button
+            <Link
               key={item.path}
-              onClick={() => router.push(item.path)}
+              href={item.path}
               className={`menu-item ${isActive ? 'active' : ''}`}
+              prefetch={true}
             >
               <Icon className="menu-icon" />
               <span className={`menu-label ${showText ? 'animate-fadeIn' : 'animate-fadeOut'}`}>
                 {item.label}
               </span>
-            </button>
+            </Link>
           );
         })}
 
@@ -97,14 +99,15 @@ export default function Sidebar() {
           <div className={`sidebar-recents ${showText ? 'animate-fadeIn' : 'animate-fadeOut'}`}>
             <h3 className="recents-title">Recents</h3>
             {recentItems.map((item) => (
-              <button
+              <Link
                 key={item.path}
-                onClick={() => router.push(item.path)}
+                href={item.path}
                 className="recent-item"
+                prefetch={true}
               >
                 <div className="recent-dot" />
                 <span className="menu-label">{item.label}</span>
-              </button>
+              </Link>
             ))}
           </div>
         )}
@@ -114,16 +117,17 @@ export default function Sidebar() {
         {bottomItems.map((item) => {
           const Icon = item.icon;
           return (
-            <button
+            <Link
               key={item.path}
-              onClick={() => router.push(item.path)}
+              href={item.path}
               className="menu-item"
+              prefetch={true}
             >
               <Icon className="menu-icon" />
               <span className={`menu-label ${showText ? 'animate-fadeIn' : 'animate-fadeOut'}`}>
                 {item.label}
               </span>
-            </button>
+            </Link>
           );
         })}
       </div>
