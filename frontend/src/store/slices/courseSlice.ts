@@ -299,6 +299,9 @@ const courseSlice = createSlice({
           dataSource: state.currentCourse.dataSource || action.payload.dataSource || 'open-web',
         };
         state.courseBlocks = action.payload.content?.courseBlocks || [];
+        // Invalidate cache so dashboard and content library refetch fresh data
+        state.coursesLoaded = false;
+        state.foldersLoaded = false;
       })
       .addCase(createNewCourse.rejected, (state, action) => {
         state.isSaving = false;
@@ -335,6 +338,9 @@ const courseSlice = createSlice({
           assessmentSettings: action.payload.assessmentSettings || state.currentCourse.assessmentSettings,
         };
         state.courseBlocks = action.payload.content?.courseBlocks || state.courseBlocks;
+        // Invalidate cache so dashboard and content library refetch fresh data
+        state.coursesLoaded = false;
+        state.foldersLoaded = false;
       })
       .addCase(saveCourse.rejected, (state, action) => {
         state.isSaving = false;
