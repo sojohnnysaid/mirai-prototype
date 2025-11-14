@@ -41,6 +41,20 @@ export default function ContentLibrary() {
   const [loading, setLoading] = useState(!foldersLoaded || !coursesLoaded);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Sync Redux folders to local state when they update
+  useEffect(() => {
+    if (foldersLoaded && reduxFolders.length > 0) {
+      setFolders(reduxFolders);
+    }
+  }, [foldersLoaded, reduxFolders]);
+
+  // Sync Redux courses to local state when they update
+  useEffect(() => {
+    if (coursesLoaded && reduxCourses.length > 0) {
+      setCourses(reduxCourses as any);
+    }
+  }, [coursesLoaded, reduxCourses]);
+
   // Load folders and courses on mount (only if not already prefetched)
   useEffect(() => {
     // If both are already loaded from prefetch, skip entirely
