@@ -153,5 +153,21 @@ export class S3Storage {
   }
 }
 
-// Export a singleton instance
-export const s3Storage = new S3Storage();
+// Lazy singleton instance to avoid errors during build time
+let _s3StorageInstance: S3Storage | null = null;
+
+export const s3Storage = {
+  get instance(): S3Storage {
+    if (!_s3StorageInstance) {
+      _s3StorageInstance = new S3Storage();
+    }
+    return _s3StorageInstance;
+  },
+
+  // Delegate methods to the lazy instance
+  readJSON: (key: string) => s3Storage.instance.readJSON(key),
+  writeJSON: (key: string, data: any) => s3Storage.instance.writeJSON(key, data),
+  listFiles: (prefix: string) => s3Storage.instance.listFiles(prefix),
+  deleteObject: (key: string) => s3Storage.instance.deleteObject(key),
+  objectExists: (key: string) => s3Storage.instance.objectExists(key),
+};

@@ -43,6 +43,11 @@ spec:
           value: "us-east-1"
         - name: S3_BASE_PATH
           value: "data"
+        # Redis caching configuration
+        - name: ENABLE_REDIS_CACHE
+          value: "true"
+        - name: REDIS_URL
+          value: "redis://redis.redis.svc.cluster.local:6379"
         resources:
           requests:
             memory: "256Mi"

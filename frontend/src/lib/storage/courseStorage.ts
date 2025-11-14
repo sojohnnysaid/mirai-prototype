@@ -1,12 +1,10 @@
-import fs from 'fs/promises';
-import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { storageAdapter } from './storageAdapter';
 
-// Define the data directory path
-const DATA_DIR = path.join(process.cwd(), 'data');
-const COURSES_DIR = path.join(DATA_DIR, 'courses');
-const EXPORTS_DIR = path.join(DATA_DIR, 'exports');
-const LIBRARY_FILE = path.join(DATA_DIR, 'library.json');
+// Define relative paths for storage adapter
+const COURSES_DIR = 'courses';
+const EXPORTS_DIR = 'exports';
+const LIBRARY_FILE = 'library.json';
 
 // Course data types
 export interface CourseMetadata {
@@ -61,17 +59,15 @@ export interface Library {
   folders: any[];
 }
 
-// Ensure directories exist
+// Ensure directories exist and initialize library
 async function ensureDirectories() {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.mkdir(COURSES_DIR, { recursive: true });
-    await fs.mkdir(EXPORTS_DIR, { recursive: true });
+    await storageAdapter.ensureDirectory(COURSES_DIR);
+    await storageAdapter.ensureDirectory(EXPORTS_DIR);
 
     // Create library file if it doesn't exist
-    try {
-      await fs.access(LIBRARY_FILE);
-    } catch {
+    const libraryExists = await storageAdapter.exists(LIBRARY_FILE);
+    if (!libraryExists) {
       const initialLibrary: Library = {
         version: '1.0',
         lastUpdated: new Date().toISOString(),
@@ -113,10 +109,10 @@ async function ensureDirectories() {
           { id: 'shared-with-me', name: 'Shared with Me', parent: 'personal', type: 'folder', children: [] }
         ]
       };
-      await fs.writeFile(LIBRARY_FILE, JSON.stringify(initialLibrary, null, 2));
+      await storageAdapter.writeJSON(LIBRARY_FILE, initialLibrary);
     }
   } catch (error) {
-    console.error('Error creating directories:', error);
+    console.error('Error initializing storage:', error);
     throw error;
   }
 }
@@ -125,8 +121,7 @@ async function ensureDirectories() {
 export async function loadLibrary(): Promise<Library> {
   await ensureDirectories();
   try {
-    const data = await fs.readFile(LIBRARY_FILE, 'utf-8');
-    return JSON.parse(data);
+    return await storageAdapter.readJSON(LIBRARY_FILE);
   } catch (error) {
     console.error('Error loading library:', error);
     return {
@@ -141,7 +136,7 @@ export async function loadLibrary(): Promise<Library> {
 // Save library index
 async function saveLibrary(library: Library): Promise<void> {
   library.lastUpdated = new Date().toISOString();
-  await fs.writeFile(LIBRARY_FILE, JSON.stringify(library, null, 2));
+  await storageAdapter.writeJSON(LIBRARY_FILE, library);
 }
 
 // Create a new course
@@ -184,8 +179,8 @@ export async function createCourse(courseData: Partial<StoredCourse>): Promise<S
   };
 
   // Save course file
-  const coursePath = path.join(COURSES_DIR, `${courseId}.json`);
-  await fs.writeFile(coursePath, JSON.stringify(course, null, 2));
+  const coursePath = `${COURSES_DIR}/${courseId}.json`;
+  await storageAdapter.writeJSON(coursePath, course);
 
   // Update library index
   const library = await loadLibrary();
@@ -219,9 +214,8 @@ export async function createCourse(courseData: Partial<StoredCourse>): Promise<S
 // Load a course by ID
 export async function loadCourse(courseId: string): Promise<StoredCourse | null> {
   try {
-    const coursePath = path.join(COURSES_DIR, `${courseId}.json`);
-    const data = await fs.readFile(coursePath, 'utf-8');
-    return JSON.parse(data);
+    const coursePath = `${COURSES_DIR}/${courseId}.json`;
+    return await storageAdapter.readJSON(coursePath);
   } catch (error) {
     console.error(`Error loading course ${courseId}:`, error);
     return null;
@@ -249,8 +243,8 @@ export async function updateCourse(courseId: string, updates: Partial<StoredCour
   };
 
   // Save updated course
-  const coursePath = path.join(COURSES_DIR, `${courseId}.json`);
-  await fs.writeFile(coursePath, JSON.stringify(updatedCourse, null, 2));
+  const coursePath = `${COURSES_DIR}/${courseId}.json`;
+  await storageAdapter.writeJSON(coursePath, updatedCourse);
 
   // Update library index
   const library = await loadLibrary();
@@ -284,21 +278,16 @@ export async function updateCourse(courseId: string, updates: Partial<StoredCour
 export async function deleteCourse(courseId: string): Promise<boolean> {
   try {
     // Delete course file
-    const coursePath = path.join(COURSES_DIR, `${courseId}.json`);
-    await fs.unlink(coursePath);
+    const coursePath = `${COURSES_DIR}/${courseId}.json`;
+    await storageAdapter.deleteFile(coursePath);
 
     // Update library index
     const library = await loadLibrary();
     library.courses = library.courses.filter(c => c.id !== courseId);
     await saveLibrary(library);
 
-    // Delete export directory if exists
-    const exportDir = path.join(EXPORTS_DIR, courseId);
-    try {
-      await fs.rm(exportDir, { recursive: true, force: true });
-    } catch {
-      // Directory might not exist, ignore error
-    }
+    // Note: Export files cleanup is not implemented for S3 storage
+    // This would require recursive directory deletion support
 
     return true;
   } catch (error) {
@@ -358,18 +347,13 @@ export async function exportCourseToSCORM(courseId: string): Promise<string> {
     throw new Error(`Course ${courseId} not found`);
   }
 
-  // Create export directory
-  const exportDir = path.join(EXPORTS_DIR, courseId);
-  await fs.mkdir(exportDir, { recursive: true });
-
   // Generate filename with timestamp
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `scorm-${timestamp}.zip`;
-  const filepath = path.join(exportDir, filename);
+  const filepath = `${EXPORTS_DIR}/${courseId}/${filename}`;
 
   // TODO: Implement actual SCORM package generation
-  // For now, just create a placeholder file
-  await fs.writeFile(filepath, 'SCORM package placeholder');
+  // For now, this is a placeholder - SCORM export not fully implemented
 
   // Update course with export record
   const exportRecord = {
