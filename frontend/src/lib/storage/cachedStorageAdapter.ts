@@ -200,11 +200,14 @@ export class CachedStorageAdapter implements IStorageAdapter {
     if (filePath.includes('library.json')) {
       // Library changed, invalidate all course lists and folder hierarchy
       await this.cache.delete(CacheKeys.folders());
+      await this.cache.delete(`${CacheKeys.folders()}:withCounts`); // Also invalidate folder counts cache
       await this.cache.invalidatePattern('courses:*');
       await this.cache.invalidatePattern('folder:*');
     } else if (filePath.includes('course-')) {
       // Course changed, invalidate library and course lists
       await this.cache.delete(CacheKeys.library());
+      await this.cache.delete(CacheKeys.folders());
+      await this.cache.delete(`${CacheKeys.folders()}:withCounts`); // Also invalidate folder counts cache
       await this.cache.invalidatePattern('courses:*');
       await this.cache.invalidatePattern('folder:*');
     }
