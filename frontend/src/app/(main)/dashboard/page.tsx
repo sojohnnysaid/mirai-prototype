@@ -13,12 +13,18 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'recent' | 'draft' | 'published'>('recent');
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
-  const { courses, isLoading } = useSelector((state: RootState) => state.course);
+  const { courses, isLoading, coursesLoaded } = useSelector((state: RootState) => state.course);
 
-  // Load courses on mount
+  // Load courses on mount (only if not already prefetched)
   useEffect(() => {
+    // If courses are already loaded from prefetch, skip
+    if (coursesLoaded && courses.length > 0) {
+      console.log('Using prefetched courses from Redux - no fetch needed');
+      return;
+    }
+
     dispatch(loadCourseLibrary());
-  }, [dispatch]);
+  }, [dispatch, coursesLoaded, courses.length]);
 
   // Filter courses based on active tab - handle undefined courses array
   const filteredCourses = (courses || []).filter(course => {
@@ -136,7 +142,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {isLoading ? (
+        {(isLoading && !coursesLoaded) ? (
           <div className="min-h-[300px] flex items-center justify-center">
             <div className="text-gray-500">Loading courses...</div>
           </div>
