@@ -42,7 +42,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cloudflared-config
-  namespace: default
+  namespace: ingress
 data:
   config.yml: |
     tunnel: <your-tunnel-id>
@@ -95,10 +95,11 @@ Expected output:
 Force the tunnel pods to reload the configuration:
 
 ```bash
-kubectl rollout restart deployment cloudflared -n default
+# Note: cloudflared runs in the 'ingress' namespace (not 'default')
+kubectl rollout restart deployment cloudflared -n ingress
 
 # Wait for rollout to complete
-kubectl rollout status deployment cloudflared -n default --timeout=60s
+kubectl rollout status deployment cloudflared -n ingress --timeout=60s
 ```
 
 ### Step 6: Verify DNS Resolution
@@ -134,7 +135,7 @@ Here's a complete example for adding a new service (Grafana) to sogos.io domain:
 ```bash
 kubectl apply -f k8s/cloudflared-config.yaml
 cloudflared tunnel route dns cb2a7768-4162-4da9-ac04-138fdecf3e3d grafana.sogos.io
-kubectl rollout restart deployment cloudflared -n default
+kubectl rollout restart deployment cloudflared -n ingress
 ```
 
 ## Troubleshooting
@@ -149,8 +150,8 @@ kubectl rollout restart deployment cloudflared -n default
 
 2. **Verify tunnel pods are running:**
    ```bash
-   kubectl get pods -n default -l app=cloudflared
-   kubectl logs -n default -l app=cloudflared --tail=50
+   kubectl get pods -n ingress -l app=cloudflared
+   kubectl logs -n ingress -l app=cloudflared --tail=50
    ```
 
 3. **Test service connectivity from within cluster:**
@@ -160,7 +161,7 @@ kubectl rollout restart deployment cloudflared -n default
 
 4. **Check tunnel configuration was applied:**
    ```bash
-   kubectl get configmap cloudflared-config -n default -o yaml | grep <subdomain>
+   kubectl get configmap cloudflared-config -n ingress -o yaml | grep <subdomain>
    ```
 
 ### Common Issues
@@ -170,7 +171,44 @@ kubectl rollout restart deployment cloudflared -n default
 | DNS not resolving | Missing DNS record in Cloudflare | Run `cloudflared tunnel route dns` command |
 | 404 errors | Incorrect service URL in tunnel config | Verify service name, namespace, and port |
 | 502 errors | Service not running or no endpoints | Check pod status and service endpoints |
+| Intermittent 502 errors | cloudflared in Istio ambient mesh | See "Istio Ambient Mesh Compatibility" below |
 | Config not updating | Tunnel pods using old config | Restart cloudflared deployment |
+
+### Istio Ambient Mesh Compatibility
+
+**IMPORTANT**: cloudflared must run in a namespace that is **NOT** enrolled in Istio ambient mesh.
+
+**Why**: cloudflared is an edge ingress proxy that needs direct connectivity to backend services. When enrolled in ambient mesh:
+- All traffic is intercepted by ztunnel
+- If ztunnel experiences control plane connectivity issues, connections fail
+- This causes intermittent 502 errors even when backend services are healthy
+
+**Current Configuration**: cloudflared runs in the dedicated `ingress` namespace which is NOT labeled for ambient mesh.
+
+**Verifying cloudflared is not in ambient mesh:**
+```bash
+# Check namespace label (should NOT have istio.io/dataplane-mode=ambient)
+kubectl get namespace ingress -o jsonpath='{.metadata.labels}'
+
+# Check pod annotations (should NOT have ambient.istio.io/redirection)
+kubectl get pods -n ingress -l app=cloudflared -o jsonpath='{.items[0].metadata.annotations}'
+```
+
+**If you need to move cloudflared out of ambient mesh:**
+```bash
+# Create non-mesh namespace
+kubectl create namespace ingress
+
+# Move cloudflared resources
+kubectl get secret cloudflared-credentials -n default -o yaml | sed 's/namespace: default/namespace: ingress/' | kubectl apply -f -
+kubectl get configmap cloudflared-config -n default -o yaml | sed 's/namespace: default/namespace: ingress/' | kubectl apply -f -
+kubectl get deployment cloudflared -n default -o yaml | sed 's/namespace: default/namespace: ingress/' | kubectl apply -f -
+
+# Delete old deployment
+kubectl delete deployment cloudflared -n default
+```
+
+**Related**: See `ISTIO_ZTUNNEL_AMBIENT_MESH.md` for more details on Istio ambient mesh configuration.
 
 ## Service URL Format
 
