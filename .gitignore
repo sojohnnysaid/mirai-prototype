@@ -115,3 +115,8 @@ k8s/*-secret.yaml
 .env.local
 .env.production.local
 istio-1.24.0/
+
+# Cloudflare Tunnel Credentials (contains sensitive data)
+k8s/ingress/cloudflared-credentials.yaml
+**/cloudflared-credentials.yaml
+**/*-credentials.yaml

@@ -1,0 +1,33 @@
+# Root kustomization file for the entire cluster
+# This provides a single entry point for applying all resources
+#
+# Usage:
+#   kubectl apply -k k8s/
+#
+# Or use with kustomize build:
+#   kustomize build k8s/ | kubectl apply -f -
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Namespaces (apply first)
+  - namespaces/ingress-namespace.yaml
+  - namespaces/default-namespace.yaml
+
+  # Infrastructure components
+  - ingress/  # Cloudflared tunnel
+  - frontend/  # Mirai frontend application
+
+  # Istio configuration (apply after namespaces)
+  # Note: peer-authentication.yaml is intentionally not included
+  # Apply manually when prerequisites are met
+  - istio/coredns-improved.yaml
+  - istio/destination-rules.yaml
+  - istio/external-services.yaml
+
+# Note: The following are managed separately:
+# - k8s/istio/peer-authentication.yaml (manual application required)
+# - k8s/monitoring/ (monitoring stack)
+# - k8s/redis/ (redis deployment)
+# - Secrets (never in Git)

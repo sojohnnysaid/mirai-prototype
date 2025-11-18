@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+  labels:
+    # Enrolled in Istio ambient mesh for application workloads
+    # This provides zero-trust mTLS between services
+    # NOTE: Edge ingress (cloudflared) runs in separate 'ingress' namespace
+    # to avoid ambient mesh interception
+    istio.io/dataplane-mode: ambient

@@ -1,3 +1,16 @@
+# ⚠️ WARNING: This file is NOT currently applied to the cluster
+#
+# These PeerAuthentication policies enforce STRICT mTLS but require:
+# 1. Stable ztunnel connectivity to istiod
+# 2. Healthy CoreDNS resolution
+# 3. No control plane issues
+#
+# Before applying, verify prerequisites in k8s/istio/README.md
+#
+# To apply: kubectl apply -f k8s/istio/peer-authentication.yaml
+# To check: kubectl get peerauthentication --all-namespaces
+#
+---
 apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:

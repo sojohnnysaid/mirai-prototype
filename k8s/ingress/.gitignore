@@ -1,0 +1,5 @@
+# Never commit actual secrets to Git
+cloudflared-credentials.yaml
+*-secret.yaml
+*.secret.yaml
+credentials*.json
