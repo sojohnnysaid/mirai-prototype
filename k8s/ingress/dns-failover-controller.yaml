@@ -60,7 +60,7 @@ spec:
         - name: STABILIZATION_FAILOVER_MINUTES
           value: "1.5"
         - name: STABILIZATION_FAILBACK_MINUTES
-          value: "10"
+          value: "1.5"
         - name: MAX_FAILOVERS_24H
           value: "3"
         - name: DRY_RUN

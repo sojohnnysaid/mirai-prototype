@@ -27,9 +27,11 @@ data:
       # Cloudflare Tunnel States
       - alert: CloudflareTunnelHealthy
         expr: |
-          probe_success{probe_type="public_https"} == 1
+          (probe_success{probe_type="public_https"} == 1
           unless
-          (count(up{job="cloudflared"} == 1) < 2)
+          (count(up{job="cloudflared"} == 1) < 2))
+          and on()
+          (hour() >= 11 and hour() < 11.25)
         for: 30s
         labels:
           severity: info
@@ -37,7 +39,7 @@ data:
           state: healthy
         annotations:
           summary: "Cloudflare Tunnel is Healthy"
-          description: "Cloudflare Tunnel has {{ $value }} healthy connections and public HTTPS probe is successful. Primary ingress path is operational."
+          description: "Cloudflare Tunnel has {{ $value }} healthy connections and public HTTPS probe is successful. Primary ingress path is operational. Daily health check at 6:00 AM EST."
 
       - alert: CloudflareTunnelDegraded
         expr: |
@@ -46,7 +48,7 @@ data:
             or
             (probe_success{probe_type="public_https"} == 1 and probe_duration_seconds{probe_type="public_https"} > 2)
           )
-        for: 30s
+        for: 15s
         labels:
           severity: warning
           component: cloudflare-tunnel
@@ -57,21 +59,17 @@ data:
 
       - alert: CloudflareTunnelDown
         expr: |
-          (
-            absent(up{job="cloudflared"}) == 1
-            or
-            (count(up{job="cloudflared"} == 1) or vector(0)) < 1
-            or
-            probe_success{probe_type="public_https"} == 0
-          )
-        for: 90s
+          (count(up{job="cloudflared"} == 1) or vector(0)) < 1
+          or
+          probe_success{probe_type="public_https"} == 0
+        for: 15s
         labels:
           severity: critical
           component: cloudflare-tunnel
           state: down
         annotations:
           summary: "Cloudflare Tunnel is DOWN"
-          description: "Cloudflare Tunnel has been down for more than 90 seconds. All cloudflared pods are offline or public HTTPS probe is failing. Failover to VPS should be active."
+          description: "Cloudflare Tunnel has been down for more than 15 seconds. All cloudflared pods are offline or public HTTPS probe is failing. Failover to VPS should be active."
 
       # WireGuard VPS Failover States
       - alert: WireGuardFailoverReachable
@@ -90,7 +88,7 @@ data:
           probe_success{probe_type="vps_wireguard"} == 1
           and
           probe_duration_seconds{probe_type="vps_wireguard"} > 1
-        for: 30s
+        for: 15s
         labels:
           severity: warning
           component: vps-failover
@@ -101,7 +99,7 @@ data:
 
       - alert: WireGuardFailoverUnreachable
         expr: probe_success{probe_type="vps_wireguard"} == 0
-        for: 60s
+        for: 15s
         labels:
           severity: critical
           component: vps-failover
@@ -116,7 +114,7 @@ data:
           (probe_success{probe_type="public_https"} == 0 or count(up{job="cloudflared"} == 1) == 0)
           and on()
           probe_success{probe_type="vps_wireguard"} == 0
-        for: 60s
+        for: 15s
         labels:
           severity: critical
           component: all-paths
