@@ -42,8 +42,8 @@ spec:
 
       containers:
       - name: controller
-        image: ghcr.io/sojohnnysaid/mirai-prototype/dns-failover-controller:v1
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/sojohnnysaid/mirai-prototype/dns-failover-controller:latest
+        imagePullPolicy: Always
 
         ports:
         - containerPort: 8080
@@ -143,6 +143,9 @@ rules:
   resources: ["configmaps"]
   resourceNames: ["dns-failover-state"]
   verbs: ["get", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
