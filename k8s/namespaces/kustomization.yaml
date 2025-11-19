@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - default-namespace.yaml
   - ingress-namespace.yaml
+  - mirai-namespace.yaml

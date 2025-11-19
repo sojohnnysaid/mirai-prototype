@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mirai-frontend
+  namespace: mirai
   labels:
     app: mirai-frontend
 spec:

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mirai
+  labels:
+    # Enrolled in Istio ambient mesh for Mirai application workloads
+    # This provides zero-trust mTLS between services
+    istio.io/dataplane-mode: ambient
